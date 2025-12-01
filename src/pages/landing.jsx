@@ -102,6 +102,14 @@ const Landing = ({ onLogout }) => {
 
   return (
     <div className="min-h-screen bg-black text-gray-300 relative overflow-hidden">
+      {/* Background Image */}
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30" 
+           style={{ backgroundImage: "url('https://tse1.mm.bing.net/th/id/OIP.HVzCGwV8haVWCouh_1B9GAHaLH?rs=1&pid=ImgDetMain&o=7&rm=3')" }}>
+      </div>
+      
+      {/* Dark Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-purple-900/50 to-black/80"></div>
+      
       {/* Animated Background */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute w-full h-full bg-gradient-to-br from-purple-900 via-blue-900 to-green-900 animate-pulse"></div>
