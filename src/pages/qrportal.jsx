@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import QRGenerator from '../components/QRGenerator';
-import QRScanner from '../components/QRScanner';
+import QRScanner from '../qscan';
+
+const REDUNDANCY = 3;
+const EXPECTED_GRID_SIZE = 18;
 
 const QRPortal = () => {
   const [activeTab, setActiveTab] = useState('generate');
+  const [scanning, setScanning] = useState(false);
   const [recentCodes, setRecentCodes] = useState([
     { type: 'character', name: 'Dracula', date: '2024-10-31' },
     { type: 'theme', name: 'Dracula Mode', date: '2024-10-30' },
@@ -40,6 +44,102 @@ const QRPortal = () => {
       color: 'gray'
     }
   ];
+
+  const handleScanResult = async (objectId) => {
+    try {
+      console.log('Scanned Object ID:', objectId);
+    } catch (error) {
+      setError('Failed to fetch batch details: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const bitsToText = (bits, length) => {
+    const reducedBits = [];
+    for (let i = 0; i < bits.length; i += REDUNDANCY) {
+      const chunk = bits.slice(i, i + REDUNDANCY);
+      const sum = chunk.reduce((a, b) => a + b, 0);
+      reducedBits.push(sum > REDUNDANCY / 2 ? 1 : 0);
+    }
+    
+    const byteStr = reducedBits.join('');
+    const truncatedBits = byteStr.slice(0, length * 4);
+    
+    const bytes = [];
+    for (let i = 0; i < truncatedBits.length; i += 8) {
+      const byteBits = truncatedBits.slice(i, i + 8);
+      if (byteBits.length === 8) {
+        bytes.push(parseInt(byteBits, 2));
+      }
+    }
+    
+    const hexArray = bytes.map(b => b.toString(16).padStart(2, '0'));
+    let result = hexArray.join('');
+    
+    if (result.length < length) {
+      result = result.padEnd(length, '0');
+    } else if (result.length > length) {
+      result = result.slice(0, length);
+    }
+    
+    return result;
+  };
+
+  const decodeGrid = (grid, length) => {
+    const bits = [];
+    const gridSize = grid.length;
+    
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        if ((i === 0 && j === 0) || 
+            (i === 0 && j === gridSize - 1) || 
+            (i === gridSize - 1 && j === 0) || 
+            (i === gridSize - 1 && j === gridSize - 1)) {
+          continue;
+        }
+        bits.push(grid[i][j] === '\\' ? 1 : 0);
+      }
+    }
+    
+    return bitsToText(bits, length);
+  };
+
+  // Process uploaded text file and extract grid pattern
+  const processTextFile = (text) => {
+    const cleanText = text.trim().replace(/\r\n/g, '\n').replace(/ /g, '');
+    const lines = cleanText.split('\n').filter(line => line.length > 0);
+    
+    if (lines.length === 0) {
+      throw new Error('File is empty or contains no valid grid data');
+    }
+    
+    const firstLineLength = lines[0].length;
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].length !== firstLineLength) {
+        throw new Error('Invalid grid format: lines have different lengths');
+      }
+    }
+    
+    if (lines.length !== EXPECTED_GRID_SIZE || firstLineLength !== EXPECTED_GRID_SIZE) {
+      throw new Error(`Expected ${EXPECTED_GRID_SIZE}x${EXPECTED_GRID_SIZE} grid, but got ${lines.length}x${firstLineLength}`);
+    }
+    
+    const grid = [];
+    for (let i = 0; i < lines.length; i++) {
+      const row = [];
+      for (let j = 0; j < lines[i].length; j++) {
+        const char = lines[i][j];
+        if (char !== '/' && char !== '\\') {
+          throw new Error(`Invalid character '${char}' at position (${i+1},${j+1}). Only '/' and '\\' are allowed.`);
+        }
+        row.push(char);
+      }
+      grid.push(row);
+    }
+    
+    return grid;
+  };
 
   return (
     <div className="min-h-screen bg-black text-gray-300 relative">
@@ -123,7 +223,14 @@ const QRPortal = () => {
             <div className="grid lg:grid-cols-2 gap-8">
               {/* QR Scanner */}
               <div className="bg-gray-900/80 backdrop-blur-sm border-2 border-green-700 rounded-xl p-6">
-                <QRScanner />
+                <QRScanner 
+                  scanning={scanning}
+                  onScanResult={handleScanResult}
+                  onStartScan={() => setScanning(true)}
+                  onStopScan={() => setScanning(false)}
+                  processTextFile={processTextFile}
+                  decodeGrid={decodeGrid}
+                />
               </div>
 
               {/* Scan Results & History */}

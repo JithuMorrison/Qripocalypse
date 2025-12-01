@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
 
-// ----------------- QR Scanner Component -----------------
 const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTextFile, decodeGrid }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -9,6 +8,7 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
   const [processing, setProcessing] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
+  const [scanResult, setScanResult] = useState('');
 
   const startCamera = async () => {
     try {
@@ -159,9 +159,11 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
       img.onload = async () => {
         try {
           const objectId = await processImage(img);
+          const result = `ObjectId: ${objectId}`;
+          setScanResult(result);
           onScanResult(objectId);
         } catch (error) {
-          alert('Error processing image: ' + error.message);
+          setScanResult(`Error: ${error.message}`);
         } finally {
           setProcessing(false);
         }
@@ -187,12 +189,14 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
         const decodedOid = decodeGrid(grid, 24);
         
         if (decodedOid && decodedOid.length === 24) {
+          const result = `ObjectId: ${decodedOid}`;
+          setScanResult(result);
           onScanResult(decodedOid);
         } else {
           throw new Error('Failed to decode valid ObjectId from grid pattern');
         }
       } catch (error) {
-        alert('Error processing text file: ' + error.message);
+        setScanResult(`Error: ${error.message}`);
       } finally {
         setProcessing(false);
       }
@@ -210,288 +214,184 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
       
       // Then process it
       const objectId = await processImage(capturedCanvas);
+      const result = `ObjectId: ${objectId}`;
+      setScanResult(result);
       onScanResult(objectId);
     } catch (error) {
-      alert('Scan failed: ' + error.message);
+      setScanResult(`Error: ${error.message}`);
     } finally {
       setProcessing(false);
     }
   };
 
+  const simulateScan = () => {
+    const result = 'Dracula has been summoned! 🧛 (Simulated ObjectId: 5f8d0d55b54764421b7156c7)';
+    setScanResult(result);
+    onScanResult('5f8d0d55b54764421b7156c7');
+  };
+
   return (
-    <div className="qr-scanner" style={{ 
-      maxWidth: '800px', 
-      margin: '0 auto', 
-      padding: '20px',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+    <div>
+      <h3 className="text-xl font-bold text-white mb-4">Scan Summoning QR</h3>
       
-      {/* Camera Preview */}
-      <div style={{ 
-        textAlign: 'center', 
-        marginBottom: '20px',
-        background: '#f8f9fa',
-        borderRadius: '16px',
-        padding: '20px',
-        border: '2px solid #e9ecef'
-      }}>
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          style={{
-            width: "100%",
-            maxWidth: "600px",
-            height: "auto",
-            border: "3px solid #007bff",
-            borderRadius: "16px",
-            display: isCameraOn ? "block" : "none",
-            marginBottom: "15px",
-            boxShadow: '0 4px 12px rgba(0,123,255,0.3)'
-          }}
-        />
-        
-        {!isCameraOn && !capturedImage && (
-          <div style={{
-            width: '100%',
-            maxWidth: '600px',
-            height: '300px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 15px auto',
-            color: 'white',
-            fontSize: '48px'
-          }}>
-            📷
-          </div>
-        )}
-
-        {/* Captured Image Preview */}
-        {capturedImage && (
-          <div style={{ marginBottom: '15px' }}>
-            <h3 style={{ color: '#28a745', marginBottom: '10px' }}>📸 Captured Image</h3>
-            <img 
-              src={capturedImage} 
-              alt="Captured" 
-              style={{
-                width: "100%",
-                maxWidth: "600px",
-                height: "auto",
-                border: "3px solid #28a745",
-                borderRadius: "16px",
-                boxShadow: '0 4px 12px rgba(40,167,69,0.3)'
-              }}
+      <div className="space-y-4">
+        {/* Camera Preview Area */}
+        <div className="bg-black border-2 border-green-600 rounded-lg p-8 flex items-center justify-center">
+          <div className="text-center">
+            {/* Video Stream */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className={`w-full max-w-[600px] h-auto border-2 ${isCameraOn ? 'border-green-500' : 'border-gray-600'} rounded-lg mb-4 ${
+                isCameraOn ? 'block' : 'hidden'
+              }`}
             />
-          </div>
-        )}
-      </div>
-
-      {/* Control Buttons */}
-      <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-        {!scanning ? (
-          <button 
-            onClick={startCamera} 
-            disabled={processing}
-            style={{
-              background: processing ? '#6c757d' : 'linear-gradient(135deg, #007bff, #0056b3)',
-              color: 'white',
-              border: 'none',
-              padding: '15px 30px',
-              fontSize: '18px',
-              borderRadius: '50px',
-              cursor: processing ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 15px rgba(0,123,255,0.4)',
-              transition: 'all 0.3s ease',
-              fontWeight: '600',
-              minWidth: '200px'
-            }}
-          >
-            {processing ? '⏳ Processing...' : '📹 Start Camera'}
-          </button>
-        ) : (
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button 
-              onClick={handleScan} 
-              disabled={processing}
-              style={{
-                background: processing ? '#6c757d' : 'linear-gradient(135deg, #28a745, #1e7e34)',
-                color: 'white',
-                border: 'none',
-                padding: '15px 30px',
-                fontSize: '18px',
-                borderRadius: '50px',
-                cursor: processing ? 'not-allowed' : 'pointer',
-                boxShadow: '0 4px 15px rgba(40,167,69,0.4)',
-                transition: 'all 0.3s ease',
-                fontWeight: '600',
-                minWidth: '180px'
-              }}
-            >
-              {processing ? '⏳ Scanning...' : '📸 Capture & Scan'}
-            </button>
             
-            <button 
-              onClick={stopCamera}
-              style={{
-                background: 'linear-gradient(135deg, #dc3545, #c82333)',
-                color: 'white',
-                border: 'none',
-                padding: '15px 30px',
-                fontSize: '18px',
-                borderRadius: '50px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(220,53,69,0.4)',
-                transition: 'all 0.3s ease',
-                fontWeight: '600',
-                minWidth: '160px'
-              }}
-            >
-              🛑 Stop Camera
-            </button>
+            {/* Camera Off Placeholder */}
+            {!isCameraOn && !capturedImage && (
+              <div className="w-full max-w-[600px] h-[180px] bg-gradient-to-br from-green-900 to-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <div className="text-6xl">📷</div>
+              </div>
+            )}
+
+            {/* Captured Image Preview */}
+            {capturedImage && (
+              <div className="mb-4">
+                <h4 className="text-green-400 font-bold mb-2">📸 Captured Image</h4>
+                <img 
+                  src={capturedImage} 
+                  alt="Captured" 
+                  className="w-full max-w-[600px] h-auto border-2 border-green-500 rounded-lg"
+                />
+              </div>
+            )}
+
+            <p className="text-gray-400">
+              {isCameraOn ? 'Camera is active - Point at QR code' : 'Camera feed would appear here'}
+            </p>
+          </div>
+        </div>
+
+        {/* Scan Result */}
+        {scanResult && (
+          <div className="bg-green-900/30 border border-green-700 rounded-lg p-4">
+            <h4 className="text-green-400 font-bold mb-2">Summoning Detected!</h4>
+            <p className="text-green-300">{scanResult}</p>
           </div>
         )}
-      </div>
 
-      {/* Upload Section */}
-      <div style={{
-        background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)',
-        borderRadius: '16px',
-        padding: '25px',
-        border: '2px dashed #6c757d',
-        marginBottom: '20px'
-      }}>
-        <h3 style={{ 
-          textAlign: 'center', 
-          marginBottom: '20px', 
-          color: '#495057',
-          fontSize: '20px' 
-        }}>
-          📁 Or Upload Files
-        </h3>
-        
-        <div style={{ 
-          display: 'flex', 
-          gap: '15px', 
-          justifyContent: 'center', 
-          flexWrap: 'wrap' 
-        }}>
-          <input
-            type="file"
-            accept=".txt,.text"
-            onChange={handleTextFileUpload}
-            style={{ display: 'none' }}
-            id="text-file-upload"
-            disabled={processing}
-          />
-          <label 
-            htmlFor="text-file-upload" 
-            style={{
-              background: 'linear-gradient(135deg, #6f42c1, #5a32a3)',
-              color: 'white',
-              border: 'none',
-              padding: '12px 25px',
-              fontSize: '16px',
-              borderRadius: '25px',
-              cursor: processing ? 'not-allowed' : 'pointer',
-              boxShadow: '0 3px 10px rgba(111,66,193,0.4)',
-              transition: 'all 0.3s ease',
-              fontWeight: '500',
-              display: 'inline-block',
-              textDecoration: 'none',
-              opacity: processing ? 0.6 : 1
-            }}
-          >
-            📄 Upload Grid Text File
-          </label>
-          
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            style={{ display: 'none' }}
-            id="image-file-upload"
-            disabled={processing}
-          />
-          <label 
-            htmlFor="image-file-upload" 
-            style={{
-              background: 'linear-gradient(135deg, #fd7e14, #e8590c)',
-              color: 'white',
-              border: 'none',
-              padding: '12px 25px',
-              fontSize: '16px',
-              borderRadius: '25px',
-              cursor: processing ? 'not-allowed' : 'pointer',
-              boxShadow: '0 3px 10px rgba(253,126,20,0.4)',
-              transition: 'all 0.3s ease',
-              fontWeight: '500',
-              display: 'inline-block',
-              textDecoration: 'none',
-              opacity: processing ? 0.6 : 1
-            }}
-          >
-            🖼️ Upload QR Image
-          </label>
-        </div>
-      </div>
+        {/* Upload Status */}
+        {uploadedFile && (
+          <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4">
+            <h4 className="text-blue-400 font-bold mb-2">📄 Uploaded File</h4>
+            <p className="text-blue-300">{uploadedFile.name}</p>
+            {processing && (
+              <p className="text-yellow-400 text-sm mt-2">⏳ Processing file...</p>
+            )}
+          </div>
+        )}
 
-      {/* Upload Status */}
-      {uploadedFile && (
-        <div style={{
-          background: '#e8f5e8',
-          border: '2px solid #28a745',
-          borderRadius: '12px',
-          padding: '15px',
-          textAlign: 'center',
-          marginBottom: '15px'
-        }}>
-          <p style={{ margin: '0 0 5px 0', fontSize: '16px', fontWeight: '600' }}>
-            📄 Uploaded: {uploadedFile.name}
-          </p>
-          {processing && (
-            <p style={{ margin: 0, color: '#007bff', fontSize: '14px' }}>
-              ⏳ Processing file...
-            </p>
+        {/* Control Buttons */}
+        <div className="space-y-3">
+          {!scanning ? (
+            <button 
+              onClick={startCamera}
+              disabled={processing}
+              className="w-full bg-green-900 hover:bg-green-800 text-white py-3 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {processing ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  📹 Start Camera
+                </>
+              )}
+            </button>
+          ) : (
+            <>
+              <button 
+                onClick={handleScan} 
+                disabled={processing}
+                className="w-full bg-purple-900 hover:bg-purple-800 text-white py-3 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {processing ? (
+                  <>
+                    <span className="animate-spin">🔮</span>
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    📸 Capture & Scan
+                  </>
+                )}
+              </button>
+              
+              <button 
+                onClick={stopCamera}
+                className="w-full bg-red-900 hover:bg-red-800 text-white py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                🛑 Stop Camera
+              </button>
+            </>
           )}
-        </div>
-      )}
 
-      {/* Processing Indicator */}
-      {processing && (
-        <div style={{
-          background: 'rgba(0, 123, 255, 0.1)',
-          border: '2px solid #007bff',
-          borderRadius: '12px',
-          padding: '20px',
-          textAlign: 'center',
-          animation: 'pulse 2s infinite'
-        }}>
-          <div style={{ fontSize: '24px', marginBottom: '10px' }}>⏳</div>
-          <p style={{ margin: 0, color: '#007bff', fontSize: '16px', fontWeight: '600' }}>
-            Processing... Please wait
-          </p>
+          {/* Simulate Scan Button */}
+          <button 
+            onClick={simulateScan}
+            className="w-full bg-orange-900 hover:bg-orange-800 text-white py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+          >
+            🧪 Simulate Scan
+          </button>
         </div>
-      )}
 
-      <style>{`
-        @keyframes pulse {
-          0% { opacity: 1; }
-          50% { opacity: 0.7; }
-          100% { opacity: 1; }
-        }
-        
-        .qr-scanner button:hover:not(:disabled) {
-          transform: translateY(-2px);
-        }
-        
-        .qr-scanner label:hover:not([style*="opacity: 0.6"]) {
-          transform: translateY(-2px);
-        }
-      `}</style>
+        {/* Upload Section */}
+        <div className="border-2 border-gray-700 rounded-lg p-4">
+          <h4 className="text-white font-bold mb-3 text-center">📁 Or Upload Files</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <input
+                type="file"
+                accept=".txt,.text"
+                onChange={handleTextFileUpload}
+                className="hidden"
+                id="text-file-upload"
+                disabled={processing}
+              />
+              <label 
+                htmlFor="text-file-upload" 
+                className={`w-full bg-blue-900 hover:bg-blue-800 text-white py-2 px-4 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer ${processing ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                📄 Upload Text File
+              </label>
+            </div>
+            
+            <div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                id="image-file-upload"
+                disabled={processing}
+              />
+              <label 
+                htmlFor="image-file-upload" 
+                className={`w-full bg-purple-900 hover:bg-purple-800 text-white py-2 px-4 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer ${processing ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                🖼️ Upload Image
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Canvas for image processing (hidden) */}
+        <canvas ref={canvasRef} className="hidden" />
+      </div>
     </div>
   );
 };
