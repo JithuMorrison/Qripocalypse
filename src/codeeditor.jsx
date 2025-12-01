@@ -1,34 +1,129 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Play, Save, GitBranch, Users, Settings, Zap, 
-  Folder, File, Plus, Terminal, Bot, Download 
+  Folder, File, Plus, Terminal, Bot, Download,
+  Github, RefreshCw, Trash2
 } from 'lucide-react';
 
+// Sample GitHub data for different users/projects
+const SAMPLE_GITHUB_PROJECTS = {
+  'dracula/haunted-castle': {
+    files: [
+      { id: 1, name: 'README.md', content: '# Haunted Castle\n\nA spooky React application built with dark magic.', type: 'file', language: 'markdown', path: 'README.md' },
+      { id: 2, name: 'main.js', content: 'console.log("Welcome to the haunted castle!");\n\nfunction summonSpirits() {\n  console.log("Spirits summoned!");\n}', type: 'file', language: 'javascript', path: 'src/main.js' },
+      { id: 3, name: 'styles.css', content: 'body {\n  background: #0a0a0a;\n  color: #8b5cf6;\n  font-family: "Cursed Font", monospace;\n}', type: 'file', language: 'css', path: 'src/styles.css' },
+      { id: 4, name: 'src', type: 'folder', children: [
+        { id: 5, name: 'components', type: 'folder', children: [
+          { id: 6, name: 'Ghost.js', content: 'export default function Ghost() {\n  return <div className="ghost">👻</div>;\n}', type: 'file', language: 'javascript', path: 'src/components/Ghost.js' },
+          { id: 7, name: 'Potion.js', content: 'export default function Potion() {\n  return <div className="potion">🧪</div>;\n}', type: 'file', language: 'javascript', path: 'src/components/Potion.js' }
+        ]},
+        { id: 8, name: 'utils.js', content: 'export function castSpell(spell) {\n  return `🔮 ${spell}!`;\n}\n\nexport function brewPotion() {\n  return "🧪 Magic potion ready!";\n}', type: 'file', language: 'javascript', path: 'src/utils.js' }
+      ]}
+    ],
+    collaborators: [
+      { id: 1, name: 'Dracula', avatar: '🧛', online: true },
+      { id: 2, name: 'Frankenstein', avatar: '🧟', online: true }
+    ]
+  },
+  'witch/spellbook': {
+    files: [
+      { id: 9, name: 'package.json', content: '{\n  "name": "ancient-spellbook",\n  "version": "1.0.0",\n  "description": "A collection of magical incantations"\n}', type: 'file', language: 'json', path: 'package.json' },
+      { id: 10, name: 'spells.js', content: 'const spells = {\n  levitation: "Wingardium Leviosa",\n  fire: "Incendio",\n  protection: "Protego"\n};\n\nexport default spells;', type: 'file', language: 'javascript', path: 'src/spells.js' },
+      { id: 11, name: 'ingredients.md', content: '# Magical Ingredients\n\n- Eye of newt\n- Bat wing\n- Wolfsbane\n- Dragon scale', type: 'file', language: 'markdown', path: 'docs/ingredients.md' }
+    ],
+    collaborators: [
+      { id: 1, name: 'Witch', avatar: '🧙‍♀️', online: true },
+      { id: 3, name: 'Wizard', avatar: '🧙', online: false }
+    ]
+  },
+  'frankenstein/lab': {
+    files: [
+      { id: 12, name: 'experiment.js', content: 'class Monster {\n  constructor() {\n    this.parts = ["brain", "heart", "limbs"];\n  }\n  \n  animate() {\n    console.log("It\'s alive!");\n  }\n}', type: 'file', language: 'javascript', path: 'lab/experiment.js' },
+      { id: 13, name: 'notes.txt', content: 'Day 1: Successfully reanimated frog.\nDay 2: Human heart transplant in progress.\nDay 3: Need more lightning.', type: 'file', language: 'text', path: 'docs/notes.txt' }
+    ],
+    collaborators: [
+      { id: 2, name: 'Frankenstein', avatar: '🧟', online: true },
+      { id: 4, name: 'Igor', avatar: '👨‍🔬', online: true }
+    ]
+  }
+};
+
 const CodeEditor = () => {
-  const [files, setFiles] = useState([
-    { id: 1, name: 'main.js', content: 'console.log("Hello, haunted world!");', type: 'file', language: 'javascript' },
-    { id: 2, name: 'styles.css', content: 'body { background: #000; color: #fff; }', type: 'file', language: 'css' },
-    { id: 3, name: 'src', type: 'folder', children: [
-      { id: 4, name: 'components', type: 'folder', children: [] },
-      { id: 5, name: 'utils.js', content: 'export function darkMagic() {}', type: 'file', language: 'javascript' }
-    ]}
-  ]);
-  const [activeFile, setActiveFile] = useState(1);
+  // State for GitHub repo input
+  const [repoInput, setRepoInput] = useState('');
+  const [currentRepo, setCurrentRepo] = useState('');
+  const [files, setFiles] = useState([]);
+  const [activeFile, setActiveFile] = useState(null);
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showAiPanel, setShowAiPanel] = useState(false);
-  const [collaborators, setCollaborators] = useState([
-    { id: 1, name: 'Dracula', avatar: '🧛', online: true },
-    { id: 2, name: 'Frankenstein', avatar: '🧟', online: true },
-    { id: 3, name: 'Witch', avatar: '🧙‍♀️', online: false }
-  ]);
+  const [collaborators, setCollaborators] = useState([]);
+  const [modifiedFiles, setModifiedFiles] = useState(() => {
+    const saved = localStorage.getItem("modifiedFiles");
+    if (!saved) return new Map();
+    try {
+      return new Map(Object.entries(JSON.parse(saved)));
+    } catch {
+      return new Map();
+    }
+  });
+  const [isCommitting, setIsCommitting] = useState(false);
 
   const fileEditorRef = useRef(null);
 
+  // Save modified files to localStorage whenever they change
+  useEffect(() => {
+    const obj = Object.fromEntries(modifiedFiles);
+    localStorage.setItem('modifiedFiles', JSON.stringify(obj));
+  }, [modifiedFiles]);
+
+  const loadGitHubRepo = (repoName) => {
+    const normalizedRepoName = repoName.toLowerCase().trim();
+    
+    if (SAMPLE_GITHUB_PROJECTS[normalizedRepoName]) {
+      const project = SAMPLE_GITHUB_PROJECTS[normalizedRepoName];
+      setFiles(project.files);
+      setCurrentRepo(repoName);
+      setCollaborators(project.collaborators);
+      
+      // Find first file to set as active
+      const firstFile = findFirstFile(project.files);
+      if (firstFile) {
+        setActiveFile(firstFile.id);
+      }
+      
+      setOutput(`✅ Loaded repository: ${repoName}\n🔮 Project files loaded successfully!`);
+    } else {
+      // Load default random project if repo not found
+      const repos = Object.keys(SAMPLE_GITHUB_PROJECTS);
+      const randomRepo = repos[Math.floor(Math.random() * repos.length)];
+      loadGitHubRepo(randomRepo);
+      setOutput(`⚠️ Repository "${repoName}" not found. Loaded "${randomRepo}" instead.`);
+    }
+  };
+
+  const findFirstFile = (fileList) => {
+    for (const file of fileList) {
+      if (file.type === 'file') return file;
+      if (file.children) {
+        const found = findFirstFile(file.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const getFileContent = (fileId, fileList = files) => {
     for (const file of fileList) {
-      if (file.id === fileId) return file;
+      if (file.id === fileId) {
+        // Check if file has been modified
+        const modifiedContent = modifiedFiles.get(fileId.toString());
+        if (modifiedContent !== undefined) {
+          return { ...file, content: modifiedContent };
+        }
+        return file;
+      }
       if (file.children) {
         const found = getFileContent(fileId, file.children);
         if (found) return found;
@@ -37,48 +132,150 @@ const CodeEditor = () => {
     return null;
   };
 
-  const activeFileContent = getFileContent(activeFile);
+  const activeFileContent = activeFile ? getFileContent(activeFile) : null;
 
   const runCode = async () => {
+    if (!activeFileContent) return;
+    
     setIsRunning(true);
     setOutput('🔮 The spirits are executing your code...\n\n');
     
     // Simulate code execution
     setTimeout(() => {
-      setOutput(prev => prev + '✨ Code executed successfully!\n🎃 Output: Hello, haunted world!\n\n💀 Process finished with exit code 0');
+      if (activeFileContent.language === 'javascript') {
+        const content = activeFileContent.content || '';
+        setOutput(prev => prev + 
+          `✨ Executing: ${activeFileContent.name}\n` +
+          `📝 Output: ${content.includes('console.log') ? 'Check browser console' : 'No console output'}\n` +
+          `💀 Process finished with exit code 0\n`
+        );
+      } else {
+        setOutput(prev => prev + 
+          `📁 File: ${activeFileContent.name}\n` +
+          `🔤 Language: ${activeFileContent.language}\n` +
+          `📊 Size: ${(activeFileContent.content?.length || 0)} characters\n`
+        );
+      }
       setIsRunning(false);
-    }, 2000);
+    }, 1500);
   };
 
   const saveFile = () => {
-    // Simulate file save
-    setFiles(prev => [...prev]); // Trigger re-render
+    if (!activeFileContent) return;
+    
+    // In a real app, this would save to GitHub
+    setOutput(prev => prev + `💾 Saved: ${activeFileContent.name}\n`);
+  };
+
+  const handleFileChange = (content) => {
+    if (!activeFile) return;
+    
+    // Update the modified files map
+    setModifiedFiles(prev => {
+      const newMap = new Map(prev);
+      newMap.set(activeFile.toString(), content);
+      return newMap;
+    });
+    
+    // Update files state to trigger re-render
+    const updatedFiles = updateFileContent(files, activeFile, content);
+    setFiles(updatedFiles);
+  };
+
+  const commitChanges = async () => {
+    if (modifiedFiles.size === 0) {
+      setOutput('⚠️ No changes to commit. Make some modifications first!');
+      return;
+    }
+
+    setIsCommitting(true);
+    setOutput('🔮 Committing changes to GitHub...\n\n');
+    
+    // Simulate GitHub commit process
+    setTimeout(() => {
+      let commitMessage = `✨ Committed ${modifiedFiles.size} file(s):\n`;
+      
+      modifiedFiles.forEach((content, fileId) => {
+        const file = getFileContent(parseInt(fileId));
+        if (file) {
+          commitMessage += `   - ${file.path || file.name}\n`;
+        }
+      });
+      
+      commitMessage += '\n🚀 Successfully pushed to GitHub!\n';
+      commitMessage += `📌 Repository: ${currentRepo}\n`;
+      commitMessage += `👥 Collaborators notified: ${collaborators.filter(c => c.online).length} online\n`;
+      
+      setOutput(prev => prev + commitMessage);
+      
+      // Clear modified files after commit
+      setModifiedFiles(new Map());
+      localStorage.removeItem('modifiedFiles');
+      setIsCommitting(false);
+    }, 2000);
   };
 
   const handleAiRequest = async () => {
     if (!aiPrompt.trim()) return;
     
-    // Simulate AI response
-    setOutput(prev => prev + `\n🔮 AI Spirit: ${aiPrompt}\n💡 Suggestion: Let me help you with that dark magic...\n`);
+    setOutput(prev => prev + `\n🧠 You: ${aiPrompt}\n`);
     setAiPrompt('');
+    
+    // Simulate AI thinking
+    setTimeout(() => {
+      const responses = [
+        `🔮 AI Spirit: Based on your code, I suggest adding error handling for the "${activeFileContent?.name}" file.`,
+        `💡 AI Spirit: Consider using async/await for better performance in your ${activeFileContent?.language} code.`,
+        `✨ AI Spirit: I detect a potential bug on line 3. Check your variable declarations.`,
+        `🎭 AI Spirit: For a spooky theme, add more CSS animations and dark mode transitions.`
+      ];
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      setOutput(prev => prev + randomResponse + '\n');
+    }, 1000);
   };
 
   const renderFileTree = (fileList, depth = 0) => {
-    return fileList.map(file => (
-      <div key={file.id} className="select-none">
-        <div
-          className={`flex items-center gap-2 py-1 px-2 rounded cursor-pointer hover:bg-gray-800 ${
-            activeFile === file.id ? 'bg-purple-900/50' : ''
-          }`}
-          onClick={() => file.type === 'file' && setActiveFile(file.id)}
-          style={{ paddingLeft: `${depth * 16 + 8}px` }}
-        >
-          {file.type === 'folder' ? <Folder size={16} /> : <File size={16} />}
-          <span className="text-sm">{file.name}</span>
+    return fileList.map(file => {
+      const isModified = modifiedFiles.has(file.id.toString());
+      
+      return (
+        <div key={file.id} className="select-none">
+          <div
+            className={`flex items-center justify-between gap-2 py-1 px-2 rounded cursor-pointer hover:bg-gray-800 group ${
+              activeFile === file.id ? 'bg-purple-900/50' : ''
+            }`}
+            onClick={() => file.type === 'file' && setActiveFile(file.id)}
+            style={{ paddingLeft: `${depth * 16 + 8}px` }}
+          >
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {file.type === 'folder' ? <Folder size={16} /> : <File size={16} />}
+              <span className="text-sm truncate">{file.name}</span>
+              {isModified && (
+                <span className="text-xs text-yellow-400 bg-yellow-900/30 px-1 rounded">modified</span>
+              )}
+            </div>
+            {isModified && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Revert changes
+                  setModifiedFiles(prev => {
+                    const newMap = new Map(prev);
+                    newMap.delete(file.id.toString());
+                    return newMap;
+                  });
+                }}
+                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400"
+                title="Revert changes"
+              >
+                <RefreshCw size={12} />
+              </button>
+            )}
+          </div>
+          {file.children && renderFileTree(file.children, depth + 1)}
         </div>
-        {file.children && renderFileTree(file.children, depth + 1)}
-      </div>
-    ));
+      );
+    });
   };
 
   return (
@@ -86,36 +283,65 @@ const CodeEditor = () => {
       {/* Header */}
       <header className="bg-gray-900 border-b border-gray-700 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-white">Ancient-Spells</h1>
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <GitBranch size={16} />
-            <span>main</span>
+          <div className="flex items-center gap-2">
+            <Github size={20} className="text-white" />
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={repoInput}
+                onChange={(e) => setRepoInput(e.target.value)}
+                placeholder="owner/repo"
+                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-sm text-white w-48 focus:border-purple-600 focus:outline-none"
+                onKeyPress={(e) => e.key === 'Enter' && loadGitHubRepo(repoInput)}
+              />
+              <button
+                onClick={() => loadGitHubRepo(repoInput)}
+                className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded-lg text-sm transition-colors"
+              >
+                Load
+              </button>
+            </div>
           </div>
+          
+          {currentRepo && (
+            <div className="flex items-center gap-2 text-sm">
+              <GitBranch size={16} />
+              <span className="text-white">{currentRepo}</span>
+              <span className="text-gray-400">• main</span>
+              {modifiedFiles.size > 0 && (
+                <span className="text-yellow-400 bg-yellow-900/30 px-2 py-0.5 rounded text-xs">
+                  {modifiedFiles.size} modified
+                </span>
+              )}
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-4">
           {/* Collaborators */}
-          <div className="flex items-center gap-2">
-            {collaborators.map(collab => (
-              <div
-                key={collab.id}
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                  collab.online ? 'bg-green-900/50' : 'bg-gray-700'
-                }`}
-                title={collab.name}
-              >
-                {collab.avatar}
-              </div>
-            ))}
-            <button className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center hover:bg-gray-600">
-              <Plus size={16} />
-            </button>
-          </div>
+          {collaborators.length > 0 && (
+            <div className="flex items-center gap-2">
+              {collaborators.map(collab => (
+                <div
+                  key={collab.id}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+                    collab.online ? 'bg-green-900/50' : 'bg-gray-700'
+                  }`}
+                  title={`${collab.name} (${collab.online ? 'online' : 'offline'})`}
+                >
+                  {collab.avatar}
+                </div>
+              ))}
+              <button className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center hover:bg-gray-600">
+                <Plus size={16} />
+              </button>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <button
             onClick={runCode}
-            disabled={isRunning}
+            disabled={isRunning || !activeFile}
             className="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
           >
             <Play size={16} />
@@ -124,7 +350,8 @@ const CodeEditor = () => {
           
           <button
             onClick={saveFile}
-            className="bg-purple-900 hover:bg-purple-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            disabled={!activeFile}
+            className="bg-purple-900 hover:bg-purple-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
           >
             <Save size={16} />
             Save
@@ -146,75 +373,137 @@ const CodeEditor = () => {
           <div className="p-4 border-b border-gray-700">
             <h2 className="font-bold text-white flex items-center gap-2">
               <Folder size={16} />
-              SPIRIT FILES
+              GITHUB FILES
             </h2>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
-            {renderFileTree(files)}
+            {files.length > 0 ? (
+              renderFileTree(files)
+            ) : (
+              <div className="p-4 text-center text-gray-500">
+                <Github size={48} className="mx-auto mb-3 opacity-50" />
+                <p>Enter a GitHub repo above to load files</p>
+                <p className="text-sm mt-2">Try: dracula/haunted-castle</p>
+              </div>
+            )}
           </div>
-          <div className="p-4 border-t border-gray-700">
-            <button className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
-              <Plus size={16} />
-              New File
-            </button>
-          </div>
+          {files.length > 0 && (
+            <div className="p-4 border-t border-gray-700 space-y-2">
+              <div className="text-xs text-gray-400">
+                Modified files are saved locally
+              </div>
+              <button
+                onClick={commitChanges}
+                disabled={isCommitting || modifiedFiles.size === 0}
+                className="w-full bg-green-900 hover:bg-green-800 text-white py-2 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <Download size={16} />
+                {isCommitting ? 'Committing...' : 'Commit Changes'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Main Editor Area */}
         <div className="flex-1 flex flex-col">
           {/* Editor Tabs */}
-          <div className="bg-gray-800 border-b border-gray-700 flex items-center">
-            {files.filter(f => f.type === 'file').map(file => (
-              <button
-                key={file.id}
-                onClick={() => setActiveFile(file.id)}
-                className={`px-4 py-2 border-r border-gray-700 text-sm flex items-center gap-2 ${
-                  activeFile === file.id ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <File size={14} />
-                {file.name}
-              </button>
-            ))}
-          </div>
+          {files.length > 0 && (
+            <div className="bg-gray-800 border-b border-gray-700 flex items-center overflow-x-auto">
+              {getAllFiles(files).map(file => {
+                const isModified = modifiedFiles.has(file.id.toString());
+                return (
+                  <button
+                    key={file.id}
+                    onClick={() => setActiveFile(file.id)}
+                    className={`px-4 py-2 border-r border-gray-700 text-sm flex items-center gap-2 flex-shrink-0 ${
+                      activeFile === file.id 
+                        ? 'bg-gray-700 text-white' 
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <File size={14} />
+                    {file.name}
+                    {isModified && (
+                      <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-          {/* Code Editor */}
+          {/* Code Editor or Welcome Screen */}
           <div className="flex-1 flex">
-            <div className="flex-1 flex flex-col">
-              <textarea
-                ref={fileEditorRef}
-                value={activeFileContent?.content || ''}
-                onChange={(e) => {
-                  const updatedFiles = updateFileContent(files, activeFile, e.target.value);
-                  setFiles(updatedFiles);
-                }}
-                className="flex-1 bg-gray-900 text-green-400 font-mono text-sm p-4 resize-none focus:outline-none"
-                spellCheck="false"
-              />
-              
-              {/* AI Panel */}
-              {showAiPanel && (
-                <div className="border-t border-gray-700 p-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder="Ask the AI spirit for help..."
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-600 focus:outline-none"
-                      onKeyPress={(e) => e.key === 'Enter' && handleAiRequest()}
-                    />
+            {activeFileContent ? (
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-700">
+                  <div className="text-sm text-gray-400">
+                    {activeFileContent.path || activeFileContent.name}
+                    {modifiedFiles.has(activeFile.toString()) && (
+                      <span className="ml-2 text-yellow-400 text-xs">● Modified</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {activeFileContent.language?.toUpperCase()}
+                  </div>
+                </div>
+                
+                <textarea
+                  ref={fileEditorRef}
+                  value={activeFileContent?.content || ''}
+                  onChange={(e) => handleFileChange(e.target.value)}
+                  className="flex-1 bg-gray-900 text-green-400 font-mono text-sm p-4 resize-none focus:outline-none leading-relaxed"
+                  spellCheck="false"
+                />
+                
+                {/* AI Panel */}
+                {showAiPanel && (
+                  <div className="border-t border-gray-700 p-4">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        placeholder="Ask the AI spirit for help..."
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-600 focus:outline-none"
+                        onKeyPress={(e) => e.key === 'Enter' && handleAiRequest()}
+                      />
+                      <button
+                        onClick={handleAiRequest}
+                        className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                      >
+                        <Zap size={16} />
+                        Ask
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-gray-900">
+                <div className="text-center text-gray-500">
+                  <Github size={64} className="mx-auto mb-6 opacity-50" />
+                  <h3 className="text-xl mb-2">No Repository Loaded</h3>
+                  <p className="mb-6">Enter a GitHub repository name above to start editing</p>
+                  <div className="grid grid-cols-1 gap-2 max-w-md mx-auto">
                     <button
-                      onClick={handleAiRequest}
-                      className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                      onClick={() => loadGitHubRepo('dracula/haunted-castle')}
+                      className="bg-gray-800 hover:bg-gray-700 px-4 py-3 rounded-lg text-left"
                     >
-                      <Zap size={16} />
-                      Ask
+                      <div className="font-bold">dracula/haunted-castle</div>
+                      <div className="text-sm text-gray-400">A spooky React application</div>
+                    </button>
+                    <button
+                      onClick={() => loadGitHubRepo('witch/spellbook')}
+                      className="bg-gray-800 hover:bg-gray-700 px-4 py-3 rounded-lg text-left"
+                    >
+                      <div className="font-bold">witch/spellbook</div>
+                      <div className="text-sm text-gray-400">Magical incantations collection</div>
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Terminal Output */}
             <div className="w-96 border-l border-gray-700 flex flex-col">
@@ -223,15 +512,22 @@ const CodeEditor = () => {
                   <Terminal size={16} />
                   SPIRIT TERMINAL
                 </h3>
-                <button
-                  onClick={() => setOutput('')}
-                  className="text-gray-400 hover:text-white text-sm"
-                >
-                  Clear
-                </button>
+                <div className="flex items-center gap-2">
+                  {modifiedFiles.size > 0 && (
+                    <span className="text-xs text-yellow-400">
+                      {modifiedFiles.size} unsaved change(s)
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setOutput('')}
+                    className="text-gray-400 hover:text-white text-sm"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
-              <pre className="flex-1 bg-black text-green-400 font-mono text-sm p-4 overflow-y-auto">
-                {output || '🔮 The spirits await your command...'}
+              <pre className="flex-1 bg-black text-green-400 font-mono text-sm p-4 overflow-y-auto whitespace-pre-wrap">
+                {output || '🔮 Enter a GitHub repo above to begin your magical coding journey...'}
               </pre>
             </div>
           </div>
@@ -241,24 +537,43 @@ const CodeEditor = () => {
       {/* Status Bar */}
       <footer className="bg-gray-900 border-t border-gray-700 px-4 py-2 flex items-center justify-between text-sm text-gray-400">
         <div className="flex items-center gap-4">
-          <span>Line: 1, Column: 1</span>
-          <span>Spaces: 2</span>
-          <span>UTF-8</span>
-          <span>{activeFileContent?.language || 'Text'}</span>
+          {activeFileContent && (
+            <>
+              <span>File: {activeFileContent.name}</span>
+              <span>Language: {activeFileContent.language}</span>
+              <span>Size: {(activeFileContent.content?.length || 0)} chars</span>
+              {modifiedFiles.has(activeFile?.toString()) && (
+                <span className="text-yellow-400">● Modified</span>
+              )}
+            </>
+          )}
         </div>
         <div className="flex items-center gap-4">
-          <span>👻 3 spirits online</span>
-          <button className="flex items-center gap-1 hover:text-white transition-colors">
-            <Download size={14} />
-            Commit Changes
-          </button>
+          {currentRepo && (
+            <>
+              <span>{collaborators.filter(c => c.online).length} spirits online</span>
+              <span>Repo: {currentRepo}</span>
+            </>
+          )}
         </div>
       </footer>
     </div>
   );
 };
 
-// Helper function to update file content
+// Helper functions
+const getAllFiles = (fileList, result = []) => {
+  for (const file of fileList) {
+    if (file.type === 'file') {
+      result.push(file);
+    }
+    if (file.children) {
+      getAllFiles(file.children, result);
+    }
+  }
+  return result;
+};
+
 const updateFileContent = (files, fileId, newContent, fileList = files) => {
   return fileList.map(file => {
     if (file.id === fileId) {
