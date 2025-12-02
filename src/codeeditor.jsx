@@ -1,9 +1,14 @@
+// CodeEditor.jsx - Updated with proper collaborators handling
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Play, Save, GitBranch, Users, Settings, Zap, 
   Folder, File, Plus, Terminal, Bot, Download,
-  Github, RefreshCw, Trash2, Edit2, X, Check
+  Github, RefreshCw, Trash2, Edit2, X, Check,
+  ArrowLeft
 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useProjects } from './components/projectContext';
 
 // Sample GitHub data for different users/projects
 const SAMPLE_GITHUB_PROJECTS = {
@@ -49,6 +54,12 @@ const SAMPLE_GITHUB_PROJECTS = {
 };
 
 const CodeEditor = () => {
+  const navigate = useNavigate();
+  const { id } = useParams(); // Get project ID from URL
+  
+  // Get projects from context
+  const { projectsList, setProjectsList } = useProjects();
+  
   // State for GitHub repo input
   const [repoInput, setRepoInput] = useState('');
   const [currentRepo, setCurrentRepo] = useState('');
@@ -60,7 +71,9 @@ const CodeEditor = () => {
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [collaborators, setCollaborators] = useState([]);
   const [modifiedFiles, setModifiedFiles] = useState(() => {
-    const saved = localStorage.getItem("modifiedFiles");
+    // Load modifications for this specific project
+    const projectKey = id ? `modifiedFiles_${id}` : 'modifiedFiles_github';
+    const saved = localStorage.getItem(projectKey);
     if (!saved) return new Map();
     try {
       return new Map(Object.entries(JSON.parse(saved)));
@@ -76,14 +89,45 @@ const CodeEditor = () => {
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
 
   const fileEditorRef = useRef(null);
+  
+  // Get current project from URL parameter
+  const currentProject = id ? projectsList.find(p => p.id === parseInt(id)) : null;
 
   // Save modified files to localStorage whenever they change
   useEffect(() => {
+    const projectKey = id ? `modifiedFiles_${id}` : 'modifiedFiles_github';
     const obj = Object.fromEntries(modifiedFiles);
-    localStorage.setItem('modifiedFiles', JSON.stringify(obj));
-  }, [modifiedFiles]);
+    localStorage.setItem(projectKey, JSON.stringify(obj));
+  }, [modifiedFiles, id]);
 
-  // Update cursor position when typing
+  // Load project files when component mounts or project changes
+  useEffect(() => {
+    if (currentProject) {
+      // Load project files
+      const projectFiles = currentProject.files || [];
+      setFiles(projectFiles);
+      
+      // Initialize collaborators for the project - FIXED HERE
+      setCollaborators([
+        { id: 1, name: 'You', avatar: '🧑‍💻', online: true },
+        ...(Array.isArray(currentProject.collaborators) ? currentProject.collaborators : [])
+      ]);
+      
+      // Set current repo name
+      setCurrentRepo(`${currentProject.name} (Local)`);
+      
+      // Set first file as active
+      const firstFile = findFirstFile(projectFiles);
+      if (firstFile) setActiveFile(firstFile.id);
+    } else {
+      // GitHub editor mode
+      setFiles([]);
+      setActiveFile(null);
+      setCurrentRepo('');
+      setCollaborators([]);
+    }
+  }, [currentProject]);
+
   const updateCursorPosition = (content) => {
     if (!content || !fileEditorRef.current) return;
     
@@ -103,12 +147,11 @@ const CodeEditor = () => {
 
       // Deep clone files and attach originalContent
       const clonedFiles = JSON.parse(JSON.stringify(project.files));
-
       attachOriginalContent(clonedFiles);
 
       setFiles(clonedFiles);
       setCurrentRepo(repoName);
-      setCollaborators(project.collaborators);
+      setCollaborators(project.collaborators || []); // Ensure collaborators is an array
 
       const firstFile = findFirstFile(clonedFiles);
       if (firstFile) setActiveFile(firstFile.id);
@@ -186,7 +229,29 @@ const CodeEditor = () => {
   const saveFile = () => {
     if (!activeFileContent) return;
     
-    // In a real app, this would save to GitHub
+    // Save modifications
+    const projectKey = id ? `modifiedFiles_${id}` : 'modifiedFiles_github';
+    const obj = Object.fromEntries(modifiedFiles);
+    localStorage.setItem(projectKey, JSON.stringify(obj));
+    
+    // Update the project in the main projects list if it's a local project
+    if (currentProject && setProjectsList) {
+      const updatedProjects = projectsList.map(project => {
+        if (project.id === currentProject.id) {
+          // Update the specific file content
+          const updatedFiles = project.files.map(file => {
+            if (file.id === activeFile) {
+              return { ...file, content: activeFileContent.content };
+            }
+            return file;
+          });
+          return { ...project, files: updatedFiles };
+        }
+        return project;
+      });
+      setProjectsList(updatedProjects);
+    }
+    
     setOutput(prev => prev + `💾 Saved: ${activeFileContent.name}\n`);
   };
 
@@ -195,8 +260,9 @@ const CodeEditor = () => {
 
     const file = getFileContent(activeFile);
 
-    // Compare with original GitHub content
-    const isActuallyModified = content !== file.originalContent;
+    // Compare with original content
+    const originalContent = file.originalContent || file.content;
+    const isActuallyModified = content !== originalContent;
 
     setModifiedFiles(prev => {
       const newMap = new Map(prev);
@@ -241,6 +307,17 @@ const CodeEditor = () => {
       setActiveFile(newId);
     }
 
+    // If it's a local project, update the project in context
+    if (currentProject && setProjectsList) {
+      const updatedProjects = projectsList.map(project => {
+        if (project.id === currentProject.id) {
+          return { ...project, files: updatedFiles };
+        }
+        return project;
+      });
+      setProjectsList(updatedProjects);
+    }
+
     setOutput(prev => prev + `✨ Created new ${type}: ${newFileName}\n`);
     setFileAction({ type: null, parentId: null });
     setNewFileName('');
@@ -265,6 +342,17 @@ const CodeEditor = () => {
       return newMap;
     });
 
+    // If it's a local project, update the project in context
+    if (currentProject && setProjectsList) {
+      const updatedProjects = projectsList.map(project => {
+        if (project.id === currentProject.id) {
+          return { ...project, files: updatedFiles };
+        }
+        return project;
+      });
+      setProjectsList(updatedProjects);
+    }
+
     setOutput(prev => prev + `🗑️ Deleted: ${file.name}\n`);
   };
 
@@ -273,6 +361,18 @@ const CodeEditor = () => {
 
     const updatedFiles = renameFileInTree(files, fileId, newName);
     setFiles(updatedFiles);
+    
+    // If it's a local project, update the project in context
+    if (currentProject && setProjectsList) {
+      const updatedProjects = projectsList.map(project => {
+        if (project.id === currentProject.id) {
+          return { ...project, files: updatedFiles };
+        }
+        return project;
+      });
+      setProjectsList(updatedProjects);
+    }
+    
     setOutput(prev => prev + `✏️ Renamed to: ${newName}\n`);
     setEditingFileId(null);
     setEditNameValue('');
@@ -290,9 +390,9 @@ const CodeEditor = () => {
     }
 
     setIsCommitting(true);
-    setOutput('🔮 Committing changes to GitHub...\n\n');
+    setOutput('🔮 Committing changes...\n\n');
     
-    // Simulate GitHub commit process
+    // Simulate commit process
     setTimeout(() => {
       let commitMessage = `✨ Committed ${modifiedFiles.size} file(s):\n`;
       
@@ -303,15 +403,22 @@ const CodeEditor = () => {
         }
       });
       
-      commitMessage += '\n🚀 Successfully pushed to GitHub!\n';
-      commitMessage += `📌 Repository: ${currentRepo}\n`;
+      if (currentProject) {
+        commitMessage += `\n🚀 Successfully saved to project!\n`;
+        commitMessage += `📌 Project: ${currentProject.name}\n`;
+      } else {
+        commitMessage += `\n🚀 Successfully pushed to GitHub!\n`;
+        commitMessage += `📌 Repository: ${currentRepo}\n`;
+      }
+      
       commitMessage += `👥 Collaborators notified: ${collaborators.filter(c => c.online).length} online\n`;
       
       setOutput(prev => prev + commitMessage);
       
       // Clear modified files after commit
       setModifiedFiles(new Map());
-      localStorage.removeItem('modifiedFiles');
+      const projectKey = id ? `modifiedFiles_${id}` : 'modifiedFiles_github';
+      localStorage.removeItem(projectKey);
       setIsCommitting(false);
     }, 2000);
   };
@@ -500,30 +607,43 @@ const CodeEditor = () => {
       {/* Header */}
       <header className="bg-gray-900 border-b border-gray-700 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Github size={20} className="text-white" />
+          {/* Back button for projects */}
+          {currentProject && (
+            <button
+              onClick={() => navigate('/projects')}
+              className="text-gray-400 hover:text-white flex items-center gap-2"
+            >
+              <ArrowLeft size={20} />
+              <span>Back to Projects</span>
+            </button>
+          )}
+          
+          {!currentProject && (
             <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={repoInput}
-                onChange={(e) => setRepoInput(e.target.value)}
-                placeholder="owner/repo"
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-sm text-white w-48 focus:border-purple-600 focus:outline-none"
-                onKeyPress={(e) => e.key === 'Enter' && loadGitHubRepo(repoInput)}
-              />
-              <button
-                onClick={() => loadGitHubRepo(repoInput)}
-                className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded-lg text-sm transition-colors"
-              >
-                Load
-              </button>
+              <Github size={20} className="text-white" />
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={repoInput}
+                  onChange={(e) => setRepoInput(e.target.value)}
+                  placeholder="owner/repo"
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-sm text-white w-48 focus:border-purple-600 focus:outline-none"
+                  onKeyPress={(e) => e.key === 'Enter' && loadGitHubRepo(repoInput)}
+                />
+                <button
+                  onClick={() => loadGitHubRepo(repoInput)}
+                  className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded-lg text-sm transition-colors"
+                >
+                  Load
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           
           {currentRepo && (
             <div className="flex items-center gap-2 text-sm">
               <GitBranch size={16} />
-              <span className="text-white">{currentRepo}</span>
+              <span className="text-white">{currentProject ? currentProject.name : currentRepo}</span>
               <span className="text-gray-400">• main</span>
               {modifiedFiles.size > 0 && (
                 <span className="text-yellow-400 bg-yellow-900/30 px-2 py-0.5 rounded text-xs">
@@ -590,7 +710,7 @@ const CodeEditor = () => {
           <div className="p-4 border-b border-gray-700 flex justify-between items-center">
             <h2 className="font-bold text-white flex items-center gap-2">
               <Folder size={16} />
-              GITHUB FILES
+              {currentProject ? 'PROJECT FILES' : 'GITHUB FILES'}
             </h2>
             <div className="flex gap-1">
               <button
@@ -646,9 +766,15 @@ const CodeEditor = () => {
               renderFileTree(files)
             ) : (
               <div className="p-4 text-center text-gray-500">
-                <Github size={48} className="mx-auto mb-3 opacity-50" />
-                <p>Enter a GitHub repo above to load files</p>
-                <p className="text-sm mt-2">Try: dracula/haunted-castle</p>
+                <Folder size={48} className="mx-auto mb-3 opacity-50" />
+                {currentProject ? (
+                  <p>No files in this project</p>
+                ) : (
+                  <>
+                    <p>Enter a GitHub repo above to load files</p>
+                    <p className="text-sm mt-2">Try: dracula/haunted-castle</p>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -759,25 +885,35 @@ const CodeEditor = () => {
             ) : (
               <div className="flex-1 flex items-center justify-center bg-gray-900">
                 <div className="text-center text-gray-500">
-                  <Github size={64} className="mx-auto mb-6 opacity-50" />
-                  <h3 className="text-xl mb-2">No Repository Loaded</h3>
-                  <p className="mb-6">Enter a GitHub repository name above to start editing</p>
-                  <div className="grid grid-cols-1 gap-2 max-w-md mx-auto">
-                    <button
-                      onClick={() => loadGitHubRepo('dracula/haunted-castle')}
-                      className="bg-gray-800 hover:bg-gray-700 px-4 py-3 rounded-lg text-left"
-                    >
-                      <div className="font-bold">dracula/haunted-castle</div>
-                      <div className="text-sm text-gray-400">A spooky React application</div>
-                    </button>
-                    <button
-                      onClick={() => loadGitHubRepo('witch/spellbook')}
-                      className="bg-gray-800 hover:bg-gray-700 px-4 py-3 rounded-lg text-left"
-                    >
-                      <div className="font-bold">witch/spellbook</div>
-                      <div className="text-sm text-gray-400">Magical incantations collection</div>
-                    </button>
-                  </div>
+                  <Folder size={64} className="mx-auto mb-6 opacity-50" />
+                  <h3 className="text-xl mb-2">
+                    {currentProject 
+                      ? `Welcome to ${currentProject.name}!` 
+                      : 'No Repository Loaded'}
+                  </h3>
+                  <p className="mb-6">
+                    {currentProject 
+                      ? 'Select a file from the sidebar to start editing' 
+                      : 'Enter a GitHub repository name above to start editing'}
+                  </p>
+                  {!currentProject && (
+                    <div className="grid grid-cols-1 gap-2 max-w-md mx-auto">
+                      <button
+                        onClick={() => loadGitHubRepo('dracula/haunted-castle')}
+                        className="bg-gray-800 hover:bg-gray-700 px-4 py-3 rounded-lg text-left"
+                      >
+                        <div className="font-bold">dracula/haunted-castle</div>
+                        <div className="text-sm text-gray-400">A spooky React application</div>
+                      </button>
+                      <button
+                        onClick={() => loadGitHubRepo('witch/spellbook')}
+                        className="bg-gray-800 hover:bg-gray-700 px-4 py-3 rounded-lg text-left"
+                      >
+                        <div className="font-bold">witch/spellbook</div>
+                        <div className="text-sm text-gray-400">Magical incantations collection</div>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -804,7 +940,7 @@ const CodeEditor = () => {
                 </div>
               </div>
               <pre className="flex-1 bg-black text-green-400 font-mono text-sm p-4 overflow-y-auto whitespace-pre-wrap">
-                {output || '🔮 Enter a GitHub repo above to begin your magical coding journey...'}
+                {output || '🔮 Welcome to the code editor! Select a file to begin...'}
               </pre>
             </div>
           </div>
@@ -831,7 +967,7 @@ const CodeEditor = () => {
           {currentRepo && (
             <>
               <span>{collaborators.filter(c => c.online).length} spirits online</span>
-              <span>Repo: {currentRepo}</span>
+              <span>{currentProject ? 'Project' : 'Repo'}: {currentProject ? currentProject.name : currentRepo}</span>
             </>
           )}
         </div>
