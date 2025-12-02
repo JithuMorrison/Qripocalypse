@@ -90,6 +90,7 @@
 
 import React, {useState, useEffect} from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ProjectProvider } from './components/projectContext';
 import Landing from './pages/landing';
 import NecroDiff from './pages/necrodiff';
 import Graveyard from './pages/graveyard';
@@ -156,138 +157,148 @@ function App() {
   const { isAuthenticated, login, logout } = useAuth();
 
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          {/* Public Routes */}
-          <Route 
-            path="/login" 
-            element={!isAuthenticated ? <Login onLogin={login} /> : <Navigate to="/" />} 
-          />
-          <Route 
-            path="/register" 
-            element={!isAuthenticated ? <Register onLogin={login} /> : <Navigate to="/" />} 
-          />
-          
-          {/* Protected Routes - Only accessible after login */}
-          <Route 
-            path="/" 
-            element={
-              <ProtectedRoute>
-                <Landing onLogout={logout} />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/projects" 
-            element={
-              <ProtectedRoute>
-                <ProjectDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/project/:id/code" 
-            element={
-              <ProtectedRoute>
-                <CodeEditor />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/project/:id/settings" 
-            element={
-              <ProtectedRoute>
-                <ProjectSettings />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/necrodiff" 
-            element={
-              <ProtectedRoute>
-                <NecroDiff />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/graveyard" 
-            element={
-              <ProtectedRoute>
-                <Graveyard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/ritual" 
-            element={
-              <ProtectedRoute>
-                <Ritual />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/terminal" 
-            element={
-              <ProtectedRoute>
-                <Terminal />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/qr" 
-            element={
-              <ProtectedRoute>
-                <QRPortal />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/alerts" 
-            element={
-              <ProtectedRoute>
-                <Alerts />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/characters" 
-            element={
-              <ProtectedRoute>
-                <Characters />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/themes" 
-            element={
-              <ProtectedRoute>
-                <Themes />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/settings" 
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/about" 
-            element={
-              <ProtectedRoute>
-                <About />
-              </ProtectedRoute>
-            } 
-          />
+    <ProjectProvider> {/* Wrap entire app with ProjectProvider */}
+      <Router>
+        <div className="App">
+          <Routes>
+            {/* Public Routes */}
+            <Route 
+              path="/login" 
+              element={!isAuthenticated ? <Login onLogin={login} /> : <Navigate to="/" />} 
+            />
+            <Route 
+              path="/register" 
+              element={!isAuthenticated ? <Register onLogin={login} /> : <Navigate to="/" />} 
+            />
+            
+            {/* Protected Routes - Only accessible after login */}
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <Landing onLogout={logout} />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/projects" 
+              element={
+                <ProtectedRoute>
+                  <ProjectDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/project/:id/code" 
+              element={
+                <ProtectedRoute>
+                  <CodeEditor />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/project" 
+              element={
+                <ProtectedRoute>
+                  <CodeEditor />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/project/:id/settings" 
+              element={
+                <ProtectedRoute>
+                  <ProjectSettings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/necrodiff" 
+              element={
+                <ProtectedRoute>
+                  <NecroDiff />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/graveyard" 
+              element={
+                <ProtectedRoute>
+                  <Graveyard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/ritual" 
+              element={
+                <ProtectedRoute>
+                  <Ritual />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/terminal" 
+              element={
+                <ProtectedRoute>
+                  <Terminal />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/qr" 
+              element={
+                <ProtectedRoute>
+                  <QRPortal />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/alerts" 
+              element={
+                <ProtectedRoute>
+                  <Alerts />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/characters" 
+              element={
+                <ProtectedRoute>
+                  <Characters />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/themes" 
+              element={
+                <ProtectedRoute>
+                  <Themes />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/about" 
+              element={
+                <ProtectedRoute>
+                  <About />
+                </ProtectedRoute>
+              } 
+            />
 
-          {/* Default redirect */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </div>
-    </Router>
+            {/* Default redirect */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+      </Router>
+    </ProjectProvider>
   );
 }
 
