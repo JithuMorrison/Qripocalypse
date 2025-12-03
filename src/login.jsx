@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Ghost, Skull } from 'lucide-react';
+import { login as authLogin } from './services/authService.jsx';
 
 const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -11,17 +12,37 @@ const Login = ({ onLogin }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage('');
     
-    // Simulate login process
-    setTimeout(() => {
-      // Simulate successful login
-      onLogin('fake_jwt_token_here');
+    try {
+      // Call authentication service
+      const result = await authLogin(formData.email, formData.password);
+      
+      if (result.success) {
+        // Store token in localStorage
+        localStorage.setItem('authToken', result.token);
+        
+        // Store user data if rememberMe is checked
+        if (formData.rememberMe) {
+          localStorage.setItem('userData', JSON.stringify(result.user));
+        }
+        
+        // Call onLogin callback with token
+        onLogin(result.token);
+      } else {
+        // Display error message from service response
+        setErrorMessage(result.error || 'Login failed. Please try again.');
+      }
+    } catch (error) {
+      setErrorMessage('An unexpected error occurred. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handleChange = (e) => {
@@ -138,6 +159,15 @@ const Login = ({ onLogin }) => {
                 )}
               </button>
             </form>
+
+            {/* Error Message Display */}
+            {errorMessage && (
+              <div className="mt-4 bg-red-900/50 border-2 border-red-700 rounded-lg p-4 text-center">
+                <p className="text-red-300 font-bold" style={{ fontFamily: "'Creepster', cursive" }}>
+                  ⚠️ {errorMessage}
+                </p>
+              </div>
+            )}
 
             {/* Register Link */}
             <div className="text-center mt-6">
