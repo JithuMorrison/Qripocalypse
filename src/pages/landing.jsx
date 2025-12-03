@@ -17,7 +17,7 @@ const Landing = ({ onLogout }) => {
       icon: <Code className="w-8 h-8" />,
       title: "Spirit Editor",
       description: "Write code with haunted AI assistance",
-      path: "/project/1/code",
+      path: "/project",
       color: "from-green-900 to-gray-800"
     },
     {
