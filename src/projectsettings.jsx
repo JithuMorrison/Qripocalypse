@@ -1,15 +1,35 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings, Cloud, Database, Terminal, 
-  Download, Play, Trash2, Plus, Copy, 
+  Download, Play, Copy, 
   Package
 } from 'lucide-react';
+import ProjectSelector from './components/ProjectSelector';
+import { loadSelectedProject } from './utils/storageHelpers';
+import { useProjects } from './components/projectContext';
 
 const ProjectSettings = () => {
+  const { projectsList } = useProjects();
+  const [selectedProject, setSelectedProject] = useState(null);
   const [activeTab, setActiveTab] = useState('docker');
   const [dockerLogs, setDockerLogs] = useState('');
   const [gcpLogs, setGcpLogs] = useState('');
   const [datadogLogs, setDatadogLogs] = useState('');
+
+  // Load selected project from localStorage on mount
+  useEffect(() => {
+    const savedProjectId = loadSelectedProject();
+    if (savedProjectId && projectsList.length > 0) {
+      const project = projectsList.find(p => p.id === savedProjectId);
+      if (project) {
+        setSelectedProject(project);
+      }
+    }
+  }, [projectsList]);
+
+  const handleProjectChange = (project) => {
+    setSelectedProject(project);
+  };
 
   const tabs = [
     { id: 'docker', name: 'Docker Ritual', icon: '🐳' },
@@ -300,6 +320,12 @@ const ProjectSettings = () => {
             DevOps & Deployment Rituals
           </p>
         </div>
+
+        {/* Project Selector */}
+        <ProjectSelector 
+          selectedProject={selectedProject}
+          onProjectChange={handleProjectChange}
+        />
 
         <div className="bg-gray-900/80 backdrop-blur-sm border-2 border-purple-700 rounded-xl overflow-hidden">
           {/* Tab Navigation */}
