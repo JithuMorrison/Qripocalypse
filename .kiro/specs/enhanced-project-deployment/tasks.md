@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Set up data models and simulation utilities
+- [x] 1. Set up data models and simulation utilities
 
   - Create TypeScript interfaces/types for all data models (Project, Configs, Deployment, Metrics, Alert)
   - Implement simulation utility functions for Docker build, cloud deployment, and metrics generation
@@ -12,7 +12,7 @@
   - **Property 4: Configuration persistence**
   - **Validates: Requirements 7.5**
 
-- [ ] 2. Implement ProjectSelector component
+- [x] 2. Implement ProjectSelector component
 
   - Create dropdown component that displays all projects from ProjectContext
   - Add onChange handler to update selected project
