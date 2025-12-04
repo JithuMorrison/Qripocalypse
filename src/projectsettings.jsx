@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  Settings, Cloud, Database, Terminal, 
+  Settings, Database, Terminal, 
   Download, Play, Copy, 
   Package
 } from 'lucide-react';
 import ProjectSelector from './components/ProjectSelector';
+import CloudPlatformsTab from './components/CloudPlatformsTab';
 import { 
   loadSelectedProject, 
   saveSelectedProject,
@@ -306,17 +307,127 @@ const ProjectSettings = () => {
     setSimulationState(prev => ({ ...prev, isBuilding: false }));
   };
 
-  const deployToGCP = () => {
-    setLogs(prev => ({ ...prev, deployment: '🔮 Connecting to Google Cloud...\n' }));
-    setTimeout(() => {
-      setLogs(prev => ({ ...prev, deployment: prev.deployment + '☁️ Deploying to Google Kubernetes Engine...\n' }));
-      setTimeout(() => {
-        setLogs(prev => ({ ...prev, deployment: prev.deployment + '✅ Successfully deployed to GKE!\n' }));
-        setTimeout(() => {
-          setLogs(prev => ({ ...prev, deployment: prev.deployment + '🌐 Service URL: https://ancient-spells-gha7d3gcp.app\n' }));
-        }, 1000);
-      }, 2000);
-    }, 1000);
+  const handleKubernetesConfigChange = useCallback((field, value) => {
+    setConfigurations(prev => ({
+      ...prev,
+      kubernetes: {
+        ...prev.kubernetes,
+        [field]: value
+      }
+    }));
+  }, []);
+
+  const handlePlatformConfigChange = useCallback((platform, field, value) => {
+    setConfigurations(prev => ({
+      ...prev,
+      [platform]: {
+        ...prev[platform],
+        [field]: value
+      }
+    }));
+  }, []);
+
+  const handleEnvVarChange = useCallback((platform, index, field, value) => {
+    setConfigurations(prev => ({
+      ...prev,
+      [platform]: {
+        ...prev[platform],
+        environmentVariables: prev[platform].environmentVariables.map((envVar, i) => 
+          i === index ? { ...envVar, [field]: value } : envVar
+        )
+      }
+    }));
+  }, []);
+
+  const addEnvVar = useCallback((platform) => {
+    setConfigurations(prev => ({
+      ...prev,
+      [platform]: {
+        ...prev[platform],
+        environmentVariables: [...prev[platform].environmentVariables, { key: '', value: '' }]
+      }
+    }));
+  }, []);
+
+  const removeEnvVar = useCallback((platform, index) => {
+    setConfigurations(prev => ({
+      ...prev,
+      [platform]: {
+        ...prev[platform],
+        environmentVariables: prev[platform].environmentVariables.filter((_, i) => i !== index)
+      }
+    }));
+  }, []);
+
+  const deployToCloud = async () => {
+    if (!selectedProject) return;
+    
+    setSimulationState(prev => ({ ...prev, isDeploying: true }));
+    setLogs(prev => ({ ...prev, deployment: '' }));
+    
+    try {
+      const { simulateCloudDeployment } = await import('./utils/simulationUtils');
+      
+      const platformConfig = {
+        ...configurations[selectedPlatform],
+        projectName: selectedProject.name
+      };
+      
+      const result = await simulateCloudDeployment(
+        selectedPlatform,
+        platformConfig,
+        (logMessage) => {
+          setLogs(prev => ({ ...prev, deployment: prev.deployment + logMessage }));
+        }
+      );
+      
+      if (result.success) {
+        // Add deployment to history
+        const newDeployment = {
+          id: `deploy-${Date.now()}`,
+          projectId: selectedProject.id,
+          projectName: selectedProject.name,
+          platform: selectedPlatform,
+          status: 'success',
+          commitHash: Math.random().toString(36).substring(2, 9),
+          branch: 'main',
+          timestamp: new Date(),
+          duration: result.duration,
+          url: result.url,
+          logs: logs.deployment,
+          buildTime: result.buildTime,
+          deployTime: result.deployTime
+        };
+        
+        setDeployments(prev => [newDeployment, ...prev].slice(0, 50));
+      } else {
+        // Add failed deployment to history
+        const newDeployment = {
+          id: `deploy-${Date.now()}`,
+          projectId: selectedProject.id,
+          projectName: selectedProject.name,
+          platform: selectedPlatform,
+          status: 'failed',
+          commitHash: Math.random().toString(36).substring(2, 9),
+          branch: 'main',
+          timestamp: new Date(),
+          duration: result.duration,
+          url: null,
+          logs: logs.deployment,
+          buildTime: result.buildTime,
+          deployTime: result.deployTime
+        };
+        
+        setDeployments(prev => [newDeployment, ...prev].slice(0, 50));
+      }
+    } catch (error) {
+      setLogs(prev => ({ 
+        ...prev, 
+        deployment: prev.deployment + `❌ Deployment failed: ${error.message}\n` 
+      }));
+    } finally {
+      setSimulationState(prev => ({ ...prev, isDeploying: false }));
+    }
   };
 
   const fetchDatadogLogs = () => {
@@ -487,96 +598,19 @@ const ProjectSettings = () => {
 
       case 'cloud':
         return (
-          <div className="space-y-6">
-            {/* Platform Selector */}
-            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">Select Cloud Platform</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {['gcp', 'aws', 'vercel', 'render'].map(platform => (
-                  <button
-                    key={platform}
-                    onClick={() => setSelectedPlatform(platform)}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      selectedPlatform === platform
-                        ? 'border-purple-500 bg-purple-900/30'
-                        : 'border-gray-700 bg-gray-900 hover:border-gray-600'
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">
-                      {platform === 'gcp' && '☁️'}
-                      {platform === 'aws' && '🔶'}
-                      {platform === 'vercel' && '▲'}
-                      {platform === 'render' && '🎨'}
-                    </div>
-                    <div className="text-white font-bold uppercase">{platform}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                  <Cloud size={24} />
-                  {selectedPlatform.toUpperCase()} Configuration
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-gray-400 mb-2">Project ID</label>
-                    <input 
-                      type="text" 
-                      defaultValue="ancient-spells-12345"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-400 mb-2">Cluster Name</label>
-                    <input 
-                      type="text" 
-                      defaultValue="haunted-cluster"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-400 mb-2">Region</label>
-                    <select className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-600 focus:outline-none">
-                      <option>us-central1</option>
-                      <option>europe-west1</option>
-                      <option>asia-southeast1</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                <h3 className="text-xl font-bold text-white mb-4">Deployment</h3>
-                <div className="space-y-3">
-                  <button
-                    onClick={deployToGCP}
-                    className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Play size={16} />
-                    Deploy to {selectedPlatform.toUpperCase()}
-                  </button>
-                  <button className="w-full bg-green-900 hover:bg-green-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                    <Cloud size={16} />
-                    Configure Auto-Scaling
-                  </button>
-                  <button className="w-full bg-purple-900 hover:bg-purple-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                    <Settings size={16} />
-                    Manage Services
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">Deployment Logs</h3>
-              <pre className="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-48 overflow-y-auto">
-                {logs.deployment || '☁️ Cloud deployment logs will appear here...'}
-              </pre>
-            </div>
-          </div>
+          <CloudPlatformsTab
+            selectedPlatform={selectedPlatform}
+            setSelectedPlatform={setSelectedPlatform}
+            configurations={configurations}
+            handleKubernetesConfigChange={handleKubernetesConfigChange}
+            handlePlatformConfigChange={handlePlatformConfigChange}
+            handleEnvVarChange={handleEnvVarChange}
+            addEnvVar={addEnvVar}
+            removeEnvVar={removeEnvVar}
+            deployToCloud={deployToCloud}
+            logs={logs}
+            simulationState={simulationState}
+          />
         );
 
       case 'datadog':

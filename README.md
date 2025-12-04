@@ -53,6 +53,71 @@ src/
 
 ## Key Components
 
+### CloudPlatformsTab Component
+
+A comprehensive cloud deployment interface component (`src/components/CloudPlatformsTab.jsx`) that provides multi-platform deployment capabilities:
+
+**Features:**
+
+- Platform selection UI for GCP, AWS, Vercel, and Render
+- Conditional Kubernetes configuration for GCP and AWS platforms
+- Platform-specific configuration forms with validation
+- Environment variables management for Vercel and Render
+- Real-time deployment logs with terminal-style display
+- Deployment action buttons with loading states
+- Platform information and feature descriptions
+
+**Props:**
+
+```javascript
+{
+  selectedPlatform: string,              // Currently selected platform
+  setSelectedPlatform: (platform) => void, // Platform selection handler
+  configurations: object,                 // All platform configurations
+  handleKubernetesConfigChange: (field, value) => void,
+  handlePlatformConfigChange: (platform, field, value) => void,
+  handleEnvVarChange: (platform, index, field, value) => void,
+  addEnvVar: (platform) => void,
+  removeEnvVar: (platform, index) => void,
+  deployToCloud: () => void,             // Deployment trigger
+  logs: { deployment: string },          // Deployment logs
+  simulationState: { isDeploying: boolean }
+}
+```
+
+**Platform Configurations:**
+
+- **GCP**: Project ID, cluster name, region, node count, machine type
+- **AWS**: Region, cluster name, service type (EKS/ECS/Lambda), instance type, VPC ID
+- **Vercel**: Project name, framework, build command, output directory, environment variables
+- **Render**: Service type (web/worker/cron), instance type, build/start commands, region, environment variables
+
+**Kubernetes Configuration** (GCP & AWS only):
+
+- Cluster name, namespace, replicas
+- CPU and memory limits
+- Auto-scaling with min/max replicas
+
+**Usage:**
+
+```javascript
+import CloudPlatformsTab from "./components/CloudPlatformsTab";
+
+<CloudPlatformsTab
+  selectedPlatform={selectedPlatform}
+  setSelectedPlatform={setSelectedPlatform}
+  configurations={configurations}
+  handleKubernetesConfigChange={handleKubernetesConfigChange}
+  handlePlatformConfigChange={handlePlatformConfigChange}
+  handleEnvVarChange={handleEnvVarChange}
+  addEnvVar={addEnvVar}
+  removeEnvVar={removeEnvVar}
+  deployToCloud={deployToCloud}
+  logs={logs}
+  simulationState={simulationState}
+/>;
+```
+
 ### ProjectSelector Component
 
 A reusable dropdown component for selecting projects with localStorage persistence (`src/components/ProjectSelector.jsx`):
@@ -312,13 +377,31 @@ The ProjectSettings component (`src/projectsettings.jsx`) provides a comprehensi
 The component now implements comprehensive state management with:
 
 - Configuration state for all platforms (Docker, Kubernetes, GCP, AWS, Vercel, Render, DataDog)
-- Deployment history with automatic persistence
+- Deployment history with automatic persistence (up to 50 deployments per project)
 - Real-time metrics with localStorage caching
 - Alert tracking with resolution status
 - Separate logs for Docker, deployment, and DataDog operations
 - Simulation state tracking (building, deploying, fetching metrics)
 
-**Current Status:** The component is fully integrated with the Enhanced Project Deployment system. All configurations, deployments, metrics, and alerts are persisted per-project and automatically loaded when switching between projects.
+**Configuration Handlers:**
+
+The component provides callback-based configuration handlers for efficient state updates:
+
+- `handleDockerConfigChange(field, value)` - Updates Docker configuration fields
+- `handleKubernetesConfigChange(field, value)` - Updates Kubernetes configuration fields
+- `handlePlatformConfigChange(platform, field, value)` - Updates platform-specific configuration fields
+- `handleEnvVarChange(platform, index, field, value)` - Updates environment variables for Vercel/Render
+- `addEnvVar(platform)` - Adds new environment variable to platform configuration
+- `removeEnvVar(platform, index)` - Removes environment variable from platform configuration
+
+**Deployment Operations:**
+
+- `buildDockerImage()` - Simulates Docker build process with real-time logs
+- `downloadDockerImage()` - Simulates pulling Docker image from registry
+- `pushToRegistry()` - Simulates pushing Docker image to configured registry
+- `deployToCloud()` - Simulates cloud deployment to selected platform with automatic history tracking
+
+**Current Status:** The component is fully integrated with the Enhanced Project Deployment system. Docker Ritual and Cloud Platforms tabs are complete with full simulation capabilities. All configurations, deployments, metrics, and alerts are persisted per-project and automatically loaded when switching between projects.
 
 **Docker Ritual Tab (Completed):**
 
@@ -337,6 +420,37 @@ The Docker Ritual tab provides a complete Docker image build and management inte
 
 All Docker operations are fully simulated without requiring actual Docker installation, making it perfect for development and testing.
 
+**Cloud Platforms Tab (Completed):**
+
+The Cloud Platforms tab provides multi-platform deployment capabilities with:
+
+- **Platform Selection** - Support for GCP, AWS, Vercel, and Render with platform-specific configurations
+- **Kubernetes Configuration** - Shared Kubernetes settings across GCP and AWS platforms including:
+  - Cluster name, namespace, and replica count
+  - CPU and memory limits
+  - Auto-scaling configuration with min/max replicas
+- **Platform-Specific Forms** - Dynamic configuration forms that adapt based on selected platform:
+  - **GCP**: Project ID, cluster name, region, node count, machine type
+  - **AWS**: Region, cluster name, service type (ECS/EKS/Lambda), instance type, VPC ID
+  - **Vercel**: Project name, framework preset, build command, output directory, environment variables
+  - **Render**: Service type (web/worker/cron), instance type, build/start commands, region, environment variables
+- **Environment Variables Management** - Add, edit, and remove environment variables for Vercel and Render platforms
+- **Deployment Actions** - Deploy to selected platform with real-time deployment logs
+- **Deployment Simulation** - Uses `simulateCloudDeployment` from `simulationUtils.jsx` with:
+  - Platform-specific deployment logs (5-8 seconds)
+  - 10% simulated failure rate for realistic testing
+  - Automatic deployment history tracking
+  - Generated deployment URLs per platform
+- **Deployment History Integration** - Successful and failed deployments are automatically added to deployment history with:
+  - Commit hash, branch, timestamp, and duration
+  - Build time and deploy time breakdown
+  - Full deployment logs
+  - Deployment URL (for successful deployments)
+- **Loading States** - Visual feedback during deployment operations
+- **Auto-save** - All configuration changes are automatically saved with 500ms debounce
+
+The Cloud Platforms tab is fully integrated with the deployment history system and provides a complete multi-cloud deployment experience.
+
 ## Development Roadmap
 
 See `.kiro/specs/enhanced-project-deployment/` for detailed specifications on the deployment system:
@@ -345,7 +459,7 @@ See `.kiro/specs/enhanced-project-deployment/` for detailed specifications on th
 - `design.md` - System architecture and component design
 - `tasks.md` - Implementation tasks and progress
 
-**Completed (Tasks 1-4):**
+**Completed (Tasks 1-5):**
 
 - ✅ Data models and simulation utilities
 - ✅ ProjectSelector component with persistence
@@ -357,10 +471,15 @@ See `.kiro/specs/enhanced-project-deployment/` for detailed specifications on th
 - ✅ Docker Ritual tab with build, download, and push operations
 - ✅ Real-time build logs with terminal-style display
 - ✅ Docker configuration form with validation
+- ✅ Cloud Platforms tab with multi-platform support (GCP, AWS, Vercel, Render)
+- ✅ Kubernetes configuration shared across GCP and AWS
+- ✅ Platform-specific configuration forms with environment variables
+- ✅ Cloud deployment simulation with realistic logs and failure scenarios
+- ✅ Automatic deployment history tracking with success/failure status
+- ✅ Platform-specific deployment URL generation
 
 **In Progress:**
 
-- Cloud Platforms tab with multi-platform support (Task 5)
 - DataDog Spirits tab with enhanced logging (Task 6)
 - Deployment Panel with history visualization (Task 7)
 - Monitoring Panel with real-time metrics (Task 8)
