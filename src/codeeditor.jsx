@@ -71,6 +71,7 @@ const CodeEditor = () => {
   const [aiPrompt, setAiPrompt] = useState('');
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [collaborators, setCollaborators] = useState([]);
+  const [githubToken, setGithubToken] = useState(localStorage.getItem("github_token"));
   
   // Modified files tracking - fixed key to include project id
   const [modifiedFiles, setModifiedFiles] = useState(() => {
@@ -460,72 +461,139 @@ const CodeEditor = () => {
 
     setIsCommitting(true);
     setOutput('🔮 Committing changes...\n\n');
-    
-    // Simulate commit process
-    setTimeout(() => {
-      let commitMessage = `✨ Committed ${modifiedFiles.size} file(s):\n`;
-      
-      modifiedFiles.forEach((content, fileId) => {
-        const file = getFileContent(parseInt(fileId));
-        if (file) {
-          commitMessage += `   - ${file.path || file.name}\n`;
-        }
-      });
-      
-      if (currentProject) {
-        commitMessage += `\n🚀 Successfully saved to project!\n`;
-        commitMessage += `📌 Project: ${currentProject.name}\n`;
-        
-        // Update original content to match current content for committed files
-        const updatedFiles = files.map(file => {
-          if (modifiedFiles.has(file.id.toString())) {
-            return {
-              ...file,
-              originalContent: modifiedFiles.get(file.id.toString())
-            };
-          }
-          return file;
+
+    const changes = [];
+    modifiedFiles.forEach((content, fileId) => {
+      const file = getFileContent(parseInt(fileId));
+      if (file) {
+        changes.push({
+          path: file.path || file.name,
+          content
         });
-        setFiles(updatedFiles);
-        
-        // Update project in context with new original content
-        if (setProjectsList) {
-          const updatedProjects = projectsList.map(project => {
-            if (project.id === currentProject.id) {
-              return { ...project, files: updatedFiles };
-            }
-            return project;
-          });
-          setProjectsList(updatedProjects);
-        }
-      } else {
-        commitMessage += `\n🚀 Successfully pushed to GitHub!\n`;
-        commitMessage += `📌 Repository: ${currentRepo}\n`;
-        
-        // Update original content for GitHub files too
-        const updatedFiles = files.map(file => {
-          if (modifiedFiles.has(file.id.toString())) {
-            return {
-              ...file,
-              originalContent: modifiedFiles.get(file.id.toString())
-            };
-          }
-          return file;
-        });
-        setFiles(updatedFiles);
       }
-      
-      commitMessage += `👥 Collaborators notified: ${collaborators.filter(c => c.online).length} online\n`;
-      
-      setOutput(prev => prev + commitMessage);
-      
-      // Clear modified files after commit
-      setModifiedFiles(new Map());
-      const projectKey = currentProject ? `modifiedFiles_${currentProject.id}` : 'modifiedFiles_github';
-      localStorage.removeItem(projectKey);
-      setIsCommitting(false);
-    }, 2000);
+    });
+
+    // Helper: fallback local commit (simulated)
+    const simulateCommit = () => {
+      setTimeout(() => {
+        let commitMessage = `✨ Committed ${modifiedFiles.size} file(s):\n`;
+
+        modifiedFiles.forEach((content, fileId) => {
+          const file = getFileContent(parseInt(fileId));
+          if (file) commitMessage += `   - ${file.path || file.name}\n`;
+        });
+
+        if (currentProject) {
+          commitMessage += `\n🚀 Successfully saved to project!\n`;
+          commitMessage += `📌 Project: ${currentProject.name}\n`;
+
+          const updatedFiles = files.map(file => {
+            if (modifiedFiles.has(file.id.toString())) {
+              return { ...file, originalContent: modifiedFiles.get(file.id.toString()) };
+            }
+            return file;
+          });
+          setFiles(updatedFiles);
+
+          if (setProjectsList) {
+            const updatedProjects = projectsList.map(project => {
+              if (project.id === currentProject.id) {
+                return { ...project, files: updatedFiles };
+              }
+              return project;
+            });
+            setProjectsList(updatedProjects);
+          }
+        } else {
+          commitMessage += `\n🚀 Successfully pushed to GitHub${simulateCommit.simulated ? ' (simulated)' : ''}!\n`;
+          commitMessage += `📌 Repository: ${currentRepo}\n`;
+
+          const updatedFiles = files.map(file => {
+            if (modifiedFiles.has(file.id.toString())) {
+              return { ...file, originalContent: modifiedFiles.get(file.id.toString()) };
+            }
+            return file;
+          });
+          setFiles(updatedFiles);
+        }
+
+        commitMessage += `👥 Collaborators notified: ${collaborators.filter(c => c.online).length} online\n`;
+
+        setOutput(prev => prev + commitMessage);
+
+        // Clear modified files
+        setModifiedFiles(new Map());
+        const projectKey = currentProject ? `modifiedFiles_${currentProject.id}` : 'modifiedFiles_github';
+        localStorage.removeItem(projectKey);
+        setIsCommitting(false);
+      }, 1000);
+    };
+
+    // // Helper: push changes to GitHub backend
+    // const pushToGitHub = async (token) => {
+    //   try {
+    //     for (const change of changes) {
+    //       await fetch('http://localhost:5000/api/push', {
+    //         method: 'POST',
+    //         headers: {
+    //           'Content-Type': 'application/json',
+    //           'Authorization': `Bearer ${token}`
+    //         },
+    //         body: JSON.stringify({
+    //           owner: currentRepoOwner,
+    //           repo: currentRepo,
+    //           path: change.path,
+    //           content: change.content
+    //         })
+    //       });
+    //     }
+
+    //     setOutput(prev => prev + `🚀 Successfully pushed ${changes.length} file(s) to GitHub!\n`);
+
+    //     // Update original content
+    //     const updatedFiles = files.map(file => {
+    //       if (modifiedFiles.has(file.id.toString())) {
+    //         return {
+    //           ...file,
+    //           originalContent: modifiedFiles.get(file.id.toString())
+    //         };
+    //       }
+    //       return file;
+    //     });
+    //     setFiles(updatedFiles);
+
+    //     // Clear modified files
+    //     setModifiedFiles(new Map());
+    //     const projectKey = currentProject ? `modifiedFiles_${currentProject.id}` : 'modifiedFiles_github';
+    //     localStorage.removeItem(projectKey);
+
+    //   } catch (err) {
+    //     setOutput(prev => prev + `❌ GitHub push failed: ${err.message}\n🔄 Falling back to local commit...\n`);
+    //     simulateCommit();
+    //   } finally {
+    //     setIsCommitting(false);
+    //   }
+    // };
+
+    // const token = localStorage.getItem('github_token');
+    // if (!token) {
+    //   setOutput(prev => prev + '🔑 Redirecting to GitHub login...\n');
+    //   window.sessionStorage.setItem('resume_commit', 'true');
+    //   window.location.href = 'http://localhost:5000/api/auth/login';
+    //   return;
+    // }
+    
+    // await pushToGitHub(token);
+    simulateCommit();
   };
+
+  useEffect(() => {
+    const shouldResume = window.sessionStorage.getItem("resume_commit") === "true";
+    if (shouldResume && githubToken) {
+      commitChanges();
+      window.sessionStorage.removeItem("resume_commit");
+    }
+  }, [githubToken]);
 
   const handleAiRequest = async () => {
     if (!aiPrompt.trim()) return;
