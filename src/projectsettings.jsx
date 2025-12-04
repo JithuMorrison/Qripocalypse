@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  Settings, Database, Terminal, 
+  Terminal, 
   Download, Play, Copy, 
   Package
 } from 'lucide-react';
 import ProjectSelector from './components/ProjectSelector';
 import CloudPlatformsTab from './components/CloudPlatformsTab';
+import DataDogSpiritsTab from './components/DataDogSpiritsTab';
+import DeploymentPanelTab from './components/DeploymentPanelTab';
+import MonitoringPanelTab from './components/MonitoringPanelTab';
 import { 
   loadSelectedProject, 
   saveSelectedProject,
@@ -430,20 +433,55 @@ const ProjectSettings = () => {
     }
   };
 
-  const fetchDatadogLogs = () => {
-    setLogs(prev => ({ ...prev, datadog: '🔮 Summoning DataDog spirits...\n' }));
-    setTimeout(() => {
-      setLogs(prev => ({ ...prev, datadog: prev.datadog + '📊 Fetching application metrics...\n' }));
-      setTimeout(() => {
-        setLogs(prev => ({ ...prev, datadog: prev.datadog + 
-          '📈 CPU Usage: 23%\n' +
-          '💾 Memory: 45%\n' +
-          '🔥 Requests: 1,234/min\n' +
-          '👻 Errors: 2\n' +
-          '✅ Uptime: 99.9%\n'
-        }));
-      }, 2000);
-    }, 1000);
+  const handleDataDogConfigChange = useCallback((field, value) => {
+    setConfigurations(prev => ({
+      ...prev,
+      datadog: {
+        ...prev.datadog,
+        [field]: value
+      }
+    }));
+  }, []);
+
+  const fetchDataDogMetrics = async () => {
+    if (!selectedProject) return;
+    
+    setSimulationState(prev => ({ ...prev, isFetchingMetrics: true }));
+    setLogs(prev => ({ ...prev, datadog: '' }));
+    
+    try {
+      const { simulateDataDogMetrics } = await import('./utils/simulationUtils');
+      
+      const newMetrics = await simulateDataDogMetrics(
+        configurations.datadog,
+        (logMessage) => {
+          setLogs(prev => ({ ...prev, datadog: prev.datadog + logMessage }));
+        }
+      );
+      
+      setMetrics(newMetrics);
+      saveMetrics(selectedProject.id, newMetrics);
+    } catch (error) {
+      setLogs(prev => ({ 
+        ...prev, 
+        datadog: prev.datadog + `❌ Failed to fetch metrics: ${error.message}\n` 
+      }));
+    } finally {
+      setSimulationState(prev => ({ ...prev, isFetchingMetrics: false }));
+    }
+  };
+
+  const refreshMonitoringMetrics = async () => {
+    if (!selectedProject) return;
+    
+    try {
+      const { generateMetrics } = await import('./utils/simulationUtils');
+      const newMetrics = generateMetrics();
+      setMetrics(newMetrics);
+      saveMetrics(selectedProject.id, newMetrics);
+    } catch (error) {
+      console.error('Failed to refresh metrics:', error);
+    }
   };
 
   const renderTabContent = () => {
@@ -615,261 +653,33 @@ const ProjectSettings = () => {
 
       case 'datadog':
         return (
-          <div className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                  <Database size={24} />
-                  DataDog Configuration
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-gray-400 mb-2">API Key</label>
-                    <input 
-                      type="password" 
-                      placeholder="••••••••••••"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-400 mb-2">App Key</label>
-                    <input 
-                      type="password" 
-                      placeholder="••••••••••••"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-400 mb-2">Site</label>
-                    <select className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-600 focus:outline-none">
-                      <option>datadoghq.com</option>
-                      <option>us3.datadoghq.com</option>
-                      <option>us5.datadoghq.com</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                <h3 className="text-xl font-bold text-white mb-4">Monitoring</h3>
-                <div className="space-y-3">
-                  <button
-                    onClick={fetchDatadogLogs}
-                    className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Database size={16} />
-                    Fetch Metrics
-                  </button>
-                  <button className="w-full bg-green-900 hover:bg-green-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                    <Settings size={16} />
-                    Configure Alerts
-                  </button>
-                  <button className="w-full bg-purple-900 hover:bg-purple-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                    <Terminal size={16} />
-                    Live Tail Logs
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">DataDog Metrics</h3>
-              <pre className="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-48 overflow-y-auto">
-                {logs.datadog || '📊 DataDog metrics will appear here...'}
-              </pre>
-            </div>
-
-            {/* Metrics Dashboard Preview */}
-            {metrics && (
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-gray-800/50 rounded-lg p-4 text-center">
-                  <div className="text-2xl text-green-400 mb-1">{metrics.uptime}%</div>
-                  <div className="text-gray-400 text-sm">Uptime</div>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-4 text-center">
-                  <div className="text-2xl text-blue-400 mb-1">{metrics.requestRate}</div>
-                  <div className="text-gray-400 text-sm">Requests/Min</div>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-4 text-center">
-                  <div className="text-2xl text-yellow-400 mb-1">{metrics.responseTime}ms</div>
-                  <div className="text-gray-400 text-sm">Avg Response</div>
-                </div>
-              </div>
-            )}
-          </div>
+          <DataDogSpiritsTab
+            configuration={configurations.datadog}
+            onConfigChange={handleDataDogConfigChange}
+            onFetchMetrics={fetchDataDogMetrics}
+            logs={logs.datadog}
+            metrics={metrics}
+            simulationState={simulationState}
+          />
         );
 
       case 'deployment':
         return (
-          <div className="space-y-6">
-            {/* Quick Stats */}
-            <div className="grid md:grid-cols-4 gap-4">
-              <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-gray-700">
-                <div className="text-3xl text-purple-400 mb-1">{deployments.length}</div>
-                <div className="text-gray-400 text-sm">Total Deployments</div>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-gray-700">
-                <div className="text-3xl text-green-400 mb-1">
-                  {deployments.filter(d => d.status === 'success').length}
-                </div>
-                <div className="text-gray-400 text-sm">Successful</div>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-gray-700">
-                <div className="text-3xl text-red-400 mb-1">
-                  {deployments.filter(d => d.status === 'failed').length}
-                </div>
-                <div className="text-gray-400 text-sm">Failed</div>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-gray-700">
-                <div className="text-3xl text-blue-400 mb-1">
-                  {deployments.length > 0 
-                    ? Math.round((deployments.filter(d => d.status === 'success').length / deployments.length) * 100)
-                    : 0}%
-                </div>
-                <div className="text-gray-400 text-sm">Success Rate</div>
-              </div>
-            </div>
-
-            {/* Deployment History */}
-            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">Recent Deployments</h3>
-              <div className="space-y-3">
-                {deployments.slice(0, 10).map(deployment => (
-                  <div 
-                    key={deployment.id}
-                    className="bg-gray-900 rounded-lg p-4 border border-gray-700 hover:border-purple-500 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${
-                          deployment.status === 'success' ? 'bg-green-400' :
-                          deployment.status === 'failed' ? 'bg-red-400' :
-                          'bg-yellow-400'
-                        }`} />
-                        <div>
-                          <div className="text-white font-bold">{deployment.platform.toUpperCase()}</div>
-                          <div className="text-gray-400 text-sm">
-                            {deployment.branch} • {deployment.commitHash}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-gray-400 text-sm">
-                          {new Date(deployment.timestamp).toLocaleString()}
-                        </div>
-                        <div className="text-gray-500 text-xs">{deployment.duration}s</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <DeploymentPanelTab
+            deployments={deployments}
+            selectedProject={selectedProject}
+            onRedeploy={deployToCloud}
+          />
         );
 
       case 'monitoring':
         return (
-          <div className="space-y-6">
-            {/* Health Status */}
-            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">System Health</h3>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-white text-lg">Healthy</span>
-              </div>
-            </div>
-
-            {/* Real-time Metrics */}
-            {metrics && (
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                  <div className="text-gray-400 text-sm mb-2">CPU Usage</div>
-                  <div className="text-3xl text-blue-400 font-bold">{metrics.cpuUsage}%</div>
-                  <div className="mt-2 bg-gray-900 rounded-full h-2">
-                    <div 
-                      className="bg-blue-400 h-2 rounded-full transition-all"
-                      style={{ width: `${metrics.cpuUsage}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                  <div className="text-gray-400 text-sm mb-2">Memory Usage</div>
-                  <div className="text-3xl text-purple-400 font-bold">{metrics.memoryUsage}%</div>
-                  <div className="mt-2 bg-gray-900 rounded-full h-2">
-                    <div 
-                      className="bg-purple-400 h-2 rounded-full transition-all"
-                      style={{ width: `${metrics.memoryUsage}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                  <div className="text-gray-400 text-sm mb-2">Request Rate</div>
-                  <div className="text-3xl text-green-400 font-bold">{metrics.requestRate}</div>
-                  <div className="text-gray-500 text-sm mt-1">requests/min</div>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                  <div className="text-gray-400 text-sm mb-2">Error Rate</div>
-                  <div className={`text-3xl font-bold ${
-                    metrics.errorRate > 3 ? 'text-red-400' : 'text-green-400'
-                  }`}>
-                    {metrics.errorRate}%
-                  </div>
-                  <div className="text-gray-500 text-sm mt-1">{metrics.errorCount} errors</div>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                  <div className="text-gray-400 text-sm mb-2">Response Time</div>
-                  <div className="text-3xl text-yellow-400 font-bold">{metrics.responseTime}ms</div>
-                  <div className="text-gray-500 text-sm mt-1">average</div>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                  <div className="text-gray-400 text-sm mb-2">Uptime</div>
-                  <div className="text-3xl text-green-400 font-bold">{metrics.uptime}%</div>
-                  <div className="text-gray-500 text-sm mt-1">last 24h</div>
-                </div>
-              </div>
-            )}
-
-            {/* Alerts Panel */}
-            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">Active Alerts</h3>
-              <div className="space-y-3">
-                {alerts.filter(a => !a.resolved).length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">
-                    <div className="text-4xl mb-2">✅</div>
-                    <div>No active alerts</div>
-                  </div>
-                ) : (
-                  alerts.filter(a => !a.resolved).map(alert => (
-                    <div 
-                      key={alert.id}
-                      className={`bg-gray-900 rounded-lg p-4 border-l-4 ${
-                        alert.type === 'error' ? 'border-red-500' :
-                        alert.type === 'warning' ? 'border-yellow-500' :
-                        'border-blue-500'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-white font-bold">{alert.message}</div>
-                          <div className="text-gray-400 text-sm">
-                            {new Date(alert.timestamp).toLocaleString()}
-                          </div>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          alert.severity === 'critical' ? 'bg-red-900 text-red-200' :
-                          alert.severity === 'high' ? 'bg-orange-900 text-orange-200' :
-                          alert.severity === 'medium' ? 'bg-yellow-900 text-yellow-200' :
-                          'bg-blue-900 text-blue-200'
-                        }`}>
-                          {alert.severity.toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+          <MonitoringPanelTab
+            metrics={metrics}
+            alerts={alerts}
+            onRefresh={refreshMonitoringMetrics}
+            selectedProject={selectedProject}
+          />
         );
 
       default:

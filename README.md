@@ -53,6 +53,127 @@ src/
 
 ## Key Components
 
+### DeploymentPanelTab Component
+
+A comprehensive deployment history and tracking interface component (`src/components/DeploymentPanelTab.jsx`) that provides deployment visualization and management:
+
+**Features:**
+
+- Quick stats dashboard showing total deployments, success/failure counts, success rate, and average duration
+- Advanced filtering system by status (success/failed/pending), platform (GCP/AWS/Vercel/Render), and date range (today/week/month/all time)
+- Deployment history list showing last 10 deployments with:
+  - Status icons and color-coded badges
+  - Platform, branch, commit hash, and duration information
+  - Deployment URLs for successful deployments
+  - Relative timestamps (e.g., "2 hours ago")
+  - One-click redeploy functionality
+- Visual deployment timeline with chronological ordering and status indicators
+- Detailed deployment modal with:
+  - Complete deployment information (platform, status, branch, commit hash)
+  - Timestamp and duration breakdown (build time vs deploy time)
+  - Full deployment logs display
+  - Deployment URL with external link
+  - Redeploy action button
+- Empty state handling for no deployments or filtered results
+- Responsive grid layouts for stats and filters
+
+**Props:**
+
+```javascript
+{
+  deployments: Deployment[],              // Array of deployment objects
+  selectedProject: Project | null,        // Currently selected project
+  onRedeploy: (deployment) => void        // Redeploy trigger callback
+}
+```
+
+**Deployment Object Structure:**
+
+```javascript
+{
+  id: string,
+  projectId: number,
+  projectName: string,
+  platform: 'gcp' | 'aws' | 'vercel' | 'render',
+  status: 'success' | 'failed' | 'pending' | 'building' | 'deploying',
+  commitHash: string,
+  branch: string,
+  timestamp: Date,
+  duration: number,
+  url: string | null,
+  logs: string,
+  buildTime: number,
+  deployTime: number
+}
+```
+
+**Usage:**
+
+```javascript
+import DeploymentPanelTab from "./components/DeploymentPanelTab";
+
+<DeploymentPanelTab
+  deployments={deployments}
+  selectedProject={selectedProject}
+  onRedeploy={deployToCloud}
+/>;
+```
+
+**Integration:** The DeploymentPanelTab is integrated into the ProjectSettings page as the "Deployment Panel" tab, providing users with complete visibility into their deployment history and the ability to redeploy previous configurations.
+
+### DataDogSpiritsTab Component
+
+A comprehensive monitoring and logging interface component (`src/components/DataDogSpiritsTab.jsx`) that provides DataDog-style metrics visualization and log management:
+
+**Features:**
+
+- DataDog configuration form with API key, app key, site, log level, and tags
+- Tag management with add/remove functionality and visual badges
+- Metrics fetching with simulated DataDog API integration
+- Enhanced logs display with color-coded log levels (ERROR, WARN, INFO, DEBUG)
+- Log filtering by level with dropdown selector
+- Quick metrics preview panel (uptime, request rate, response time, error rate)
+- Detailed metrics dashboard with 9 metric cards:
+  - CPU and Memory usage with color-coded gauges
+  - Request rate and throughput
+  - Error count and error rate
+  - Response time with threshold indicators
+  - Active connections
+  - Uptime percentage
+- Action buttons for Fetch Metrics, Configure Alerts, and Live Tail Logs
+- Validation and loading states
+- Auto-save configuration changes
+
+**Props:**
+
+```javascript
+{
+  configuration: DataDogConfig,           // DataDog configuration object
+  onConfigChange: (field, value) => void, // Configuration change handler (2 params: field, value)
+  onFetchMetrics: () => void,            // Metrics fetch trigger
+  logs: string,                          // DataDog logs string
+  metrics: MonitoringMetrics | null,     // Current metrics object
+  simulationState: { isFetchingMetrics: boolean }
+}
+```
+
+**Note:** The `onConfigChange` callback expects exactly 2 parameters (field, value). The component internally handles the 'datadog' configuration namespace.
+
+**Usage:**
+
+```javascript
+import DataDogSpiritsTab from "./components/DataDogSpiritsTab";
+
+<DataDogSpiritsTab
+  configuration={configurations.datadog}
+  onConfigChange={handleDataDogConfigChange}
+  onFetchMetrics={fetchDataDogMetrics}
+  logs={logs.datadog}
+  metrics={metrics}
+  simulationState={simulationState}
+/>;
+```
+
 ### CloudPlatformsTab Component
 
 A comprehensive cloud deployment interface component (`src/components/CloudPlatformsTab.jsx`) that provides multi-platform deployment capabilities:
@@ -401,7 +522,7 @@ The component provides callback-based configuration handlers for efficient state
 - `pushToRegistry()` - Simulates pushing Docker image to configured registry
 - `deployToCloud()` - Simulates cloud deployment to selected platform with automatic history tracking
 
-**Current Status:** The component is fully integrated with the Enhanced Project Deployment system. Docker Ritual and Cloud Platforms tabs are complete with full simulation capabilities. All configurations, deployments, metrics, and alerts are persisted per-project and automatically loaded when switching between projects.
+**Current Status:** The component is fully integrated with the Enhanced Project Deployment system. Docker Ritual, Cloud Platforms, and DataDog Spirits tabs are complete with full simulation capabilities. All configurations, deployments, metrics, and alerts are persisted per-project and automatically loaded when switching between projects.
 
 **Docker Ritual Tab (Completed):**
 
@@ -451,6 +572,32 @@ The Cloud Platforms tab provides multi-platform deployment capabilities with:
 
 The Cloud Platforms tab is fully integrated with the deployment history system and provides a complete multi-cloud deployment experience.
 
+**DataDog Spirits Tab (Completed):**
+
+The DataDog Spirits tab provides comprehensive monitoring and logging capabilities with:
+
+- **DataDog Configuration Form** - Input fields for API key, app key, site selection, log level, and tags
+- **Tag Management** - Add, edit, and remove tags with visual tag badges
+- **Metrics Fetching** - Fetch real-time application metrics with simulated DataDog API calls
+- **Enhanced Logs Display** - Terminal-style log display with color-coded log levels:
+  - ERROR (red), WARN (yellow), INFO (blue), DEBUG (gray)
+  - Log filtering by level (ALL, DEBUG, INFO, WARN, ERROR)
+  - Real-time log streaming simulation
+- **Quick Metrics Dashboard** - Preview panel showing uptime, request rate, response time, and error rate
+- **Detailed Metrics Dashboard** - Comprehensive metrics visualization with:
+  - CPU and Memory usage gauges with color-coded thresholds
+  - Request rate and throughput metrics
+  - Error count and error rate tracking
+  - Response time monitoring
+  - Active connections count
+  - Uptime percentage with SLA indicator
+- **Action Buttons** - Fetch Metrics, Configure Alerts, and Live Tail Logs
+- **Validation** - Disables actions when required API keys are missing
+- **Loading States** - Visual feedback during metrics fetching operations
+- **Auto-save** - All configuration changes are automatically saved with 500ms debounce
+
+The DataDog Spirits tab uses `simulateDataDogMetrics` from `simulationUtils.jsx` to generate realistic monitoring data and logs without requiring actual DataDog API credentials.
+
 ## Development Roadmap
 
 See `.kiro/specs/enhanced-project-deployment/` for detailed specifications on the deployment system:
@@ -459,7 +606,7 @@ See `.kiro/specs/enhanced-project-deployment/` for detailed specifications on th
 - `design.md` - System architecture and component design
 - `tasks.md` - Implementation tasks and progress
 
-**Completed (Tasks 1-5):**
+**Completed (Tasks 1-6):**
 
 - ✅ Data models and simulation utilities
 - ✅ ProjectSelector component with persistence
@@ -477,10 +624,10 @@ See `.kiro/specs/enhanced-project-deployment/` for detailed specifications on th
 - ✅ Cloud deployment simulation with realistic logs and failure scenarios
 - ✅ Automatic deployment history tracking with success/failure status
 - ✅ Platform-specific deployment URL generation
+- ✅ DataDog Spirits tab with enhanced logging and metrics visualization
 
 **In Progress:**
 
-- DataDog Spirits tab with enhanced logging (Task 6)
 - Deployment Panel with history visualization (Task 7)
 - Monitoring Panel with real-time metrics (Task 8)
 
