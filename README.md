@@ -458,6 +458,61 @@ const commits = generateCommitsForProjects(projectsList);
 - Medium (11-50 changes): 🧛, 🧟, 🧙‍♀️
 - Large (51+ changes): 💀, ☠️, 👹
 
+### NecroDiff Page
+
+A haunted code comparison tool (`src/pages/necrodiff.jsx`) that visualizes differences between two code versions with a spooky aesthetic:
+
+**Features:**
+
+- **File Selection Integration** - Select files from any project using the FileSelector component
+- **Dual Code Panels** - Side-by-side comparison of old (THE PAST) and new (THE PRESENT) code
+- **File Metadata Display** - Shows project name and file path for selected files
+- **Manual Input Support** - Users can paste or type code directly into textareas
+- **LCS-Based Diff Algorithm** - Computes Longest Common Subsequence for accurate line-by-line comparison
+- **Context-Aware Display** - Shows 2 lines of context before/after changes
+- **Haunted Characters** - Each diff line is annotated with spooky characters (🧛 Dracula for deletions, 🧟 Frankenstein for additions, 👻 Ghost for unchanged)
+- **GitHub-Style Unified View** - Familiar diff format with line numbers, +/- markers, and color coding
+- **Interactive Tooltips** - Hover over haunted characters to see their dark wisdom
+- **Statistics Display** - Shows total additions, deletions, and unchanged lines
+- **Spooky Animations** - Floating ghosts, glitch effects, and haunted background
+
+**State Management:**
+
+```javascript
+{
+  oldCode: string,                    // Content of old code panel
+  newCode: string,                    // Content of new code panel
+  selectedOldFile: FileData | null,   // Selected file for old code
+  selectedNewFile: FileData | null,   // Selected file for new code
+  showOldFileSelector: boolean,       // Old file selector modal visibility
+  showNewFileSelector: boolean,       // New file selector modal visibility
+  comparing: boolean,                 // Comparison in progress
+  diffs: DiffLine[],                  // Array of diff results
+  glitchEffect: boolean,              // Visual glitch effect state
+  titleGlitch: boolean                // Title glitch animation state
+}
+```
+
+**DiffLine Structure:**
+
+```javascript
+{
+  type: 'addition' | 'deletion' | 'unchanged' | 'separator',
+  oldLineNum: number | null,
+  newLineNum: number | null,
+  content: string,
+  character: HauntedCharacter
+}
+```
+
+**Integration:**
+
+- Uses `FileSelector` component for file selection from projects
+- Integrates with `ProjectContext` via `useProjects()` hook
+- Displays file metadata (project name, file path) when files are selected
+- Preserves manual input capability alongside file selection
+- Part of the Git Pages Project Integration feature (Task 3)
+
 ### Deployment Models
 
 Comprehensive data models for the Enhanced Project Deployment system (`src/models/deploymentModels.jsx`):
@@ -556,63 +611,47 @@ function MyComponent() {
 
 ## Recent Updates
 
-### FileSelector Component (Latest)
+### NecroDiff Page Enhancement (Latest - Task 3)
 
-The FileSelector component has been implemented as a reusable modal for file selection across multiple pages:
+The NecroDiff page has been enhanced with file selection capabilities:
 
-**Implementation:**
+**Changes:**
+
+- Added file selection state management for old and new code panels
+- Integrated FileSelector component with dual modals
+- Added "Select File" buttons above each textarea with haunted styling
+- Displays selected file metadata (project name and file path)
+- Populates textareas with file content when files are selected
+- Maintains existing compare functionality and manual paste capability
+- All new UI elements blend seamlessly with the existing spooky aesthetic
+
+**Status:** Completes Task 3 of the Git Pages Project Integration specification.
+
+### FileSelector Component (Task 2)
+
+Implemented reusable modal component for file selection across multiple pages:
 
 - Created `src/components/FileSelector.jsx` with complete file selection UI
 - Modal overlay with backdrop click-to-close and explicit close button
 - Expandable/collapsible project sections showing file count and type
-- File list with name, path, and language indicators
-- Hover effects and visual feedback for better user experience
-- Empty state handling for projects without files
-- Consistent haunted theme styling with purple accents
-
-**Features:**
-
 - Integrates with ProjectContext to display all available projects
 - Returns enhanced file data including projectName and projectId
-- Supports custom modal titles via props
 - Keyboard accessible with proper ARIA labels
-- Automatically closes after file selection
 
-**Integration:**
+**Status:** Completes Task 2 of the Git Pages Project Integration specification.
 
-This component is designed for the Git Pages Project Integration feature and will be used in:
+### Commit Generator Utility (Task 1)
 
-- NecroDiff page for selecting files to compare
-- Ritual page for selecting files to merge
-- Terminal page for project context selection
-
-This completes Task 2 of the Git Pages Project Integration specification.
-
-### Commit Generator Utility
-
-The commit generator utility has been implemented to support the Git Pages Project Integration feature:
-
-**Implementation:**
+Implemented utility for generating simulated commit data:
 
 - Created `src/utils/commitGenerator.jsx` with complete commit generation logic
 - Generates 2-5 commits per project with realistic metadata
 - Implements duplicate hash detection (10% chance across projects)
-- Assigns haunted characters based on change magnitude (small/medium/large)
-- Produces spooky-themed commit messages with file name interpolation
-- Generates random dates within the last 30 days
+- Assigns haunted characters based on change magnitude
+- 12 spooky author names and 20 commit message templates
 - Sorts commits chronologically (newest first)
 
-**Data Generation:**
-
-- 12 spooky author names (e.g., "Count Commitula", "Morticia Merge")
-- 20 commit message templates with {file} placeholder support
-- 3 tiers of haunted characters based on change size
-- 10 spooky epitaphs for tombstone display
-- Realistic additions/deletions counts (1-100 additions, 0-50 deletions)
-
-**Integration:**
-
-This utility is designed to be used by the Graveyard page to display commit history with project filtering and duplicate detection. It completes Task 1 of the Git Pages Project Integration specification.
+**Status:** Completes Task 1 of the Git Pages Project Integration specification.
 
 ### Docker Ritual Tab Implementation
 
@@ -897,10 +936,119 @@ See `.kiro/specs/git-pages-project-integration/` for detailed specifications:
 - Ritual page enhancement with file selection
 - Terminal page enhancement with project-specific commands
 
+## Git Pages Project Integration
+
+This feature enhances Git-themed pages with project selection and file handling capabilities using simulated data from ProjectContext.
+
+**Completed Components:**
+
+1. **Commit Generator Utility** (`src/utils/commitGenerator.jsx`)
+
+   - Generates realistic commit data for all projects
+   - Implements duplicate hash detection
+   - Assigns haunted characters based on change magnitude
+
+2. **FileSelector Component** (`src/components/FileSelector.jsx`)
+
+   - Reusable modal for file selection across pages
+   - Displays projects with expandable file lists
+   - Returns enhanced file data with project context
+
+3. **NecroDiff Page Enhancement** (`src/pages/necrodiff.jsx`)
+   - Integrated file selection for both code panels
+   - Displays file metadata when files are selected
+   - Preserves manual input capability
+
+**In Progress:**
+
+4. Graveyard page enhancement with commit display and project filtering
+5. Ritual page enhancement with file selection
+6. Terminal page enhancement with project-specific commands
+
+**Design Principles:**
+
+- No external Git/GitHub integration - all data is simulated
+- Existing UI designs remain unchanged
+- New elements blend with spooky aesthetic
+- Shared components for consistency
+
 ## Vite Configuration
 
-This project uses [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) with Babel for Fast Refresh.
+This project uses [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) with Babel for Fast Refresh during development.
+
+## Development Notes
+
+### LocalStorage Structure
+
+The application uses localStorage for client-side persistence with the following keys:
+
+- `qripocalypse_users_data` - User authentication data
+- `authToken` - Current session token
+- `hauntedProjects` - Project list with files and metadata
+- `deployment_selected_project` - Currently selected project for deployment
+- `deployment_configurations_{projectId}` - Per-project deployment configurations
+- `deployment_history_{projectId}` - Per-project deployment history (max 50)
+- `deployment_metrics_{projectId}` - Per-project monitoring metrics
+- `deployment_alerts_{projectId}` - Per-project system alerts
+
+### Browser Compatibility
+
+- Requires modern browser with Web Crypto API support (for password hashing)
+- Tested on Chrome, Firefox, Safari, and Edge
+- LocalStorage must be enabled
+- JavaScript must be enabled
+
+## Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/haunted-feature`)
+3. Commit your changes with spooky commit messages
+4. Push to the branch (`git push origin feature/haunted-feature`)
+5. Open a Pull Request
+
+## Roadmap
+
+### Upcoming Features
+
+- [ ] Complete Graveyard page with commit history and project filtering
+- [ ] Complete Ritual page with merge conflict resolution
+- [ ] Complete Terminal page with Git command simulation
+- [ ] Real backend integration for authentication
+- [ ] Real Git/GitHub integration for version control
+- [ ] Collaborative editing with WebSockets
+- [ ] Code execution environment
+- [ ] Plugin system for extensions
+- [ ] Dark/Light theme toggle (currently dark only)
+- [ ] Mobile responsive improvements
+
+### Known Issues
+
+- File upload in dashboard is UI-only (not connected to backend)
+- OAuth buttons (GitHub, Google) are placeholders
+- All deployment operations are simulated
+- LocalStorage has size limitations (5-10MB typically)
+
+## Support
+
+For issues, questions, or contributions:
+
+- Open an issue on GitHub
+- Check existing documentation
+- Review the spooky code comments
+
+## Acknowledgments
+
+- Built with React and Vite
+- Icons by Lucide React
+- Spooky fonts: Creepster, Nosifer, Eater (Google Fonts)
+- Inspired by Halloween and developer tools
 
 ## License
 
 MIT
+
+---
+
+**May your code rest in peace... or rise again stronger! 👻**

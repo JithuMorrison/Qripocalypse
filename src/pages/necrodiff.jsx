@@ -307,7 +307,7 @@ const NecroDiff = () => {
             </div>
             
             {/* File selector button */}
-            <div className="mb-3">
+            <div className="mb-3 mt-3">
               <button
                 onClick={() => setShowOldFileSelector(true)}
                 className="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors text-sm font-semibold"
@@ -344,7 +344,7 @@ const NecroDiff = () => {
             </div>
             
             {/* File selector button */}
-            <div className="mb-3">
+            <div className="mb-3  mt-3">
               <button
                 onClick={() => setShowNewFileSelector(true)}
                 className="bg-purple-800 hover:bg-purple-700 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors text-sm font-semibold"

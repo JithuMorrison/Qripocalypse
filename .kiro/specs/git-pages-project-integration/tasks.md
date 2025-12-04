@@ -28,7 +28,7 @@
   - Preserve existing compare functionality and manual paste capability
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-- [ ] 4. Enhance Graveyard page with project filtering and commits
+- [x] 4. Enhance Graveyard page with project filtering and commits
 
   - Add state for all commits, selected project, and filtered commits
   - Add project selector dropdown above search bar with "All Projects" option

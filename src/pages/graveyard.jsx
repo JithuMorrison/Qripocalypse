@@ -1,45 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Tombstone from '../components/tombstone';
 import GhostPopup from '../components/ghostpopup';
+import { useProjects } from '../components/projectContext';
+import { generateCommitsForProjects } from '../utils/commitGenerator';
 
 const Graveyard = () => {
   const [selectedCommit, setSelectedCommit] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [allCommits, setAllCommits] = useState([]);
+  const [selectedProject, setSelectedProject] = useState(null); // null means "All Projects"
+  const [filteredCommits, setFilteredCommits] = useState([]);
+  
+  const { projectsList } = useProjects();
 
-  const mockCommits = [
-    {
-      hash: 'a1b2c3d4',
-      message: 'Fixed the ancient curse in main.js',
-      author: 'Dr. Frankenstein',
-      date: '2024-10-31',
-      changes: '+12 -4',
-      ghost: '🧟',
-      epitaph: 'Here lies a brave attempt to tame the monster'
-    },
-    {
-      hash: 'e5f6g7h8',
-      message: 'Summoned dark entities in ritual.ts',
-      author: 'Count Dracula',
-      date: '2024-10-30',
-      changes: '+45 -12',
-      ghost: '🧛',
-      epitaph: 'His code now drinks the blood of bugs'
-    },
-    {
-      hash: 'i9j0k1l2',
-      message: 'Cleansed haunted variables',
-      author: 'Witch of Mutations',
-      date: '2024-10-29',
-      changes: '+8 -23',
-      ghost: '🧙‍♀️',
-      epitaph: 'She turned bugs into features with a spell'
+  // Generate commits on mount
+  useEffect(() => {
+    if (projectsList && projectsList.length > 0) {
+      const commits = generateCommitsForProjects(projectsList);
+      setAllCommits(commits);
     }
-  ];
+  }, [projectsList]);
 
-  const filteredCommits = mockCommits.filter(commit =>
-    commit.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    commit.author.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter commits based on selected project and search term
+  useEffect(() => {
+    let commits = allCommits;
+
+    // Filter by selected project
+    if (selectedProject !== null) {
+      commits = commits.filter(commit => commit.projectId === selectedProject);
+    }
+
+    // Filter by search term (message, author, or project name)
+    if (searchTerm) {
+      commits = commits.filter(commit =>
+        commit.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        commit.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        commit.projectName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    setFilteredCommits(commits);
+  }, [allCommits, selectedProject, searchTerm]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-300 relative">
@@ -57,8 +58,24 @@ const Graveyard = () => {
           </p>
         </header>
 
-        {/* Search Bar */}
-        <div className="max-w-md mx-auto mb-8">
+        {/* Project Selector and Search Bar */}
+        <div className="max-w-md mx-auto mb-8 space-y-4">
+          {/* Project Selector Dropdown */}
+          <select
+            value={selectedProject === null ? '' : selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value === '' ? null : parseInt(e.target.value))}
+            className="w-full bg-black/50 border-2 border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-600 focus:outline-none backdrop-blur-sm cursor-pointer"
+            style={{ fontFamily: "'Eater', cursive" }}
+          >
+            <option value="">👻 All Projects</option>
+            {projectsList.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.ghost} {project.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Search Bar */}
           <input
             type="text"
             placeholder="Search through the graves..."
