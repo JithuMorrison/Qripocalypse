@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "name": "React Source to Docs Sync",
+  "description": "Monitors all JSX files, CSS files, configuration files, and package.json in this React project. When changes are detected, prompts the agent to update the README.md documentation to reflect the current state of the codebase.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.jsx",
+      "src/**/*.css",
+      "package.json",
+      "vite.config.js",
+      "eslint.config.js",
+      "index.html"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file has been modified in this React project. Please review the changes and update the README.md file accordingly. Ensure the documentation accurately reflects:\n- New components or features added\n- Changes to project structure\n- Updated dependencies or configuration\n- Modified functionality or behavior\n- Any new setup or usage instructions needed\n\nKeep the documentation clear, concise, and helpful for developers working with this project."
+  }
+}
