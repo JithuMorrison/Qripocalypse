@@ -40,7 +40,7 @@
   - Ensure search filters by message, author, or project name
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
 
-- [ ] 5. Enhance Ritual page with file selection
+- [x] 5. Enhance Ritual page with file selection
 
   - Add state for selected files and file selector modals (left and right sides)
   - Add "Select File" buttons above each code block (styled to match existing theme)
@@ -50,7 +50,7 @@
   - Preserve existing merge functionality and manual paste capability
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 6. Enhance Terminal page with project selection
+- [x] 6. Enhance Terminal page with project selection
 
   - Add state for selected project
   - Add project selector dropdown above terminal window (styled to match existing theme)

@@ -1,11 +1,30 @@
 import React, { useState } from 'react';
 import SpellCircle from '../components/SpellCircle';
+import FileSelector from '../components/FileSelector';
+import { FileCode } from 'lucide-react';
 
 const Ritual = () => {
   const [leftCode, setLeftCode] = useState('// HEAD - The ancient version\nfunction ancientSpell() {\n  return "I live!";\n}');
   const [rightCode, setRightCode] = useState('// FEATURE - The new creation\nfunction ancientSpell() {\n  return "She lives!";\n}');
   const [mergedCode, setMergedCode] = useState('');
   const [isMerging, setIsMerging] = useState(false);
+  
+  // File selection state
+  const [selectedLeftFile, setSelectedLeftFile] = useState(null);
+  const [selectedRightFile, setSelectedRightFile] = useState(null);
+  const [showLeftFileSelector, setShowLeftFileSelector] = useState(false);
+  const [showRightFileSelector, setShowRightFileSelector] = useState(false);
+
+  // File selection handlers
+  const handleLeftFileSelect = (file) => {
+    setSelectedLeftFile(file);
+    setLeftCode(file.content);
+  };
+
+  const handleRightFileSelect = (file) => {
+    setSelectedRightFile(file);
+    setRightCode(file.content);
+  };
 
   const performMerge = () => {
     setIsMerging(true);
@@ -42,6 +61,27 @@ const Ritual = () => {
               <span>🧛</span>
               HEAD (Ancient Version)
             </h3>
+            
+            {/* File selector button */}
+            <div className="mb-3">
+              <button
+                onClick={() => setShowLeftFileSelector(true)}
+                className="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors text-sm font-semibold"
+                style={{ fontFamily: "'Creepster', cursive" }}
+              >
+                <FileCode size={16} />
+                Select File
+              </button>
+            </div>
+
+            {/* File path display */}
+            {selectedLeftFile && (
+              <div className="mb-2 text-xs text-red-300 bg-black/40 px-3 py-2 rounded border border-red-800">
+                <div className="font-semibold">{selectedLeftFile.projectName}</div>
+                <div className="text-gray-400">{selectedLeftFile.path}</div>
+              </div>
+            )}
+
             <textarea
               value={leftCode}
               onChange={(e) => setLeftCode(e.target.value)}
@@ -60,6 +100,27 @@ const Ritual = () => {
               <span>🧙‍♀️</span>
               FEATURE (New Creation)
             </h3>
+            
+            {/* File selector button */}
+            <div className="mb-3">
+              <button
+                onClick={() => setShowRightFileSelector(true)}
+                className="bg-blue-800 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors text-sm font-semibold"
+                style={{ fontFamily: "'Creepster', cursive" }}
+              >
+                <FileCode size={16} />
+                Select File
+              </button>
+            </div>
+
+            {/* File path display */}
+            {selectedRightFile && (
+              <div className="mb-2 text-xs text-blue-300 bg-black/40 px-3 py-2 rounded border border-blue-800">
+                <div className="font-semibold">{selectedRightFile.projectName}</div>
+                <div className="text-gray-400">{selectedRightFile.path}</div>
+              </div>
+            )}
+
             <textarea
               value={rightCode}
               onChange={(e) => setRightCode(e.target.value)}
@@ -88,6 +149,21 @@ const Ritual = () => {
           </p>
         </div>
       </div>
+
+      {/* File Selector Modals */}
+      <FileSelector
+        isOpen={showLeftFileSelector}
+        onClose={() => setShowLeftFileSelector(false)}
+        onSelectFile={handleLeftFileSelect}
+        title="Select HEAD Code from the Spirit Realm"
+      />
+      
+      <FileSelector
+        isOpen={showRightFileSelector}
+        onClose={() => setShowRightFileSelector(false)}
+        onSelectFile={handleRightFileSelect}
+        title="Select FEATURE Code from the Spirit Realm"
+      />
     </div>
   );
 };

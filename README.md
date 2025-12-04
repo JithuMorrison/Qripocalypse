@@ -407,6 +407,24 @@ The FileSelector component is designed to be used across multiple pages in the G
 
 The component automatically closes after file selection and provides complete file metadata including project context for proper file handling.
 
+### Terminal Page Enhancement (Latest - Task 6)
+
+The Terminal (NecroTerminal) page has been enhanced with project selection and commit integration:
+
+**Changes:**
+
+- Added project selection state management with dropdown selector
+- Integrated `useProjects()` hook to access all available projects
+- Integrated `generateCommitsForProjects()` to create commit history on mount
+- Implemented project-aware command simulation for all Git commands
+- Added project context to terminal prompt showing selected project name
+- Commands now reference actual project files and generated commits
+- Added warning message when no project is selected
+- All Git command responses are now project-specific and contextual
+- Maintains existing CRT screen aesthetic and quick command buttons
+
+**Status:** Completes Task 6 of the Git Pages Project Integration specification.
+
 ### Commit Generator Utility
 
 A utility for generating simulated commit data for projects (`src/utils/commitGenerator.jsx`):
@@ -457,6 +475,97 @@ const commits = generateCommitsForProjects(projectsList);
 - Small (1-10 changes): 👻, 🕷️, 🦇
 - Medium (11-50 changes): 🧛, 🧟, 🧙‍♀️
 - Large (51+ changes): 💀, ☠️, 👹
+
+### Terminal Page (NecroTerminal)
+
+A possessed command-line interface (`src/pages/terminal.jsx`) that simulates Git commands with project-specific context and spooky responses:
+
+**Features:**
+
+- **Project Selection Integration** - Select any project from ProjectContext to execute commands in that project's context
+- **Commit History Integration** - Uses commit generator to display realistic commit logs for selected projects
+- **Project-Aware Git Commands** - All Git commands reference the selected project's data (files, commits, branches)
+- **Simulated Git Operations** - Realistic responses for git status, log, diff, commit, push, pull, branch, and merge
+- **Dynamic File References** - Commands reference actual files from the selected project
+- **CRT Screen Effect** - Retro terminal aesthetic with green phosphor glow
+- **Quick Command Buttons** - One-click access to common Git commands
+- **Command History** - Scrollable terminal output with command history
+- **Project Context Prompt** - Terminal prompt displays selected project name
+
+**State Management:**
+
+```javascript
+{
+  selectedProject: Project | null,     // Currently selected project
+  commands: CommandHistory[],          // Array of executed commands and responses
+  currentInput: string,                // Current command input
+  isTyping: boolean,                   // Command execution in progress
+  allCommits: Commit[]                 // Generated commits for all projects
+}
+```
+
+**Simulated Commands:**
+
+- `git status` - Shows working directory status with project files
+- `git log` - Displays commit history from generated commits for the project
+- `git diff` - Shows simulated diff for random project file
+- `git branch` - Lists simulated branches
+- `git commit` - Simulates committing changes
+- `git push` - Simulates pushing to remote
+- `git pull` - Simulates pulling from remote
+- `git merge` - Simulates merge operation
+- `help` - Shows available commands
+- `clear` - Clears terminal output
+
+**Integration:**
+
+- Uses `useProjects()` hook to access project list from ProjectContext
+- Uses `generateCommitsForProjects()` to create commit history on mount
+- Filters commits by selected project ID for project-specific responses
+- References actual project files in command outputs
+- Part of the Git Pages Project Integration feature (Task 6)
+
+### Ritual Page (Merge Ritual)
+
+A mystical merge conflict resolution interface (`src/pages/ritual.jsx`) that helps resolve code conflicts through dark magic with a spooky aesthetic:
+
+**Features:**
+
+- **File Selection Integration** - Select files from any project using the FileSelector component for both HEAD and FEATURE branches
+- **Dual Code Panels** - Side-by-side comparison of HEAD (Ancient Version) and FEATURE (New Creation) code
+- **File Metadata Display** - Shows project name and file path for selected files with color-coded borders (red for HEAD, blue for FEATURE)
+- **Manual Input Support** - Users can paste or type code directly into textareas
+- **Spell Circle Animation** - Central animated spell circle for performing the merge ritual
+- **Merge Simulation** - Simulates merge process with 2-second ritual animation
+- **Resurrection Display** - Shows merged result in a separate panel with green styling
+- **Color-Coded UI** - Red theme for HEAD, blue theme for FEATURE, green theme for merged result
+- **Haunted Characters** - 🧛 for HEAD (Ancient Version), 🧙‍♀️ for FEATURE (New Creation), ⚡ for THE RESURRECTION
+- **Witch Narration** - Mystical guidance messages in purple-themed panel
+- **Spooky Background** - Gradient background with purple and blue glowing orbs
+
+**State Management:**
+
+```javascript
+{
+  leftCode: string,                    // Content of HEAD code panel
+  rightCode: string,                   // Content of FEATURE code panel
+  mergedCode: string,                  // Result of merge ritual
+  isMerging: boolean,                  // Merge ritual in progress
+  selectedLeftFile: FileData | null,   // Selected file for HEAD
+  selectedRightFile: FileData | null,  // Selected file for FEATURE
+  showLeftFileSelector: boolean,       // HEAD file selector modal visibility
+  showRightFileSelector: boolean       // FEATURE file selector modal visibility
+}
+```
+
+**Integration:**
+
+- Uses `FileSelector` component for file selection from projects
+- Integrates with `ProjectContext` via `useProjects()` hook (through FileSelector)
+- Displays file metadata (project name, file path) when files are selected
+- Preserves manual input capability alongside file selection
+- Uses `SpellCircle` component for merge animation
+- Part of the Git Pages Project Integration feature (Task 5)
 
 ### NecroDiff Page
 
@@ -611,7 +720,42 @@ function MyComponent() {
 
 ## Recent Updates
 
-### NecroDiff Page Enhancement (Latest - Task 3)
+### Terminal Page Enhancement (Latest - Task 6)
+
+The Terminal (NecroTerminal) page has been enhanced with project selection and commit integration capabilities:
+
+**Changes:**
+
+- Added project selection dropdown to choose which project to work with
+- Integrated commit generator to display realistic commit history
+- Implemented project-aware Git command simulation
+- All commands now reference selected project's files and commits
+- Terminal prompt displays selected project name
+- Added warning when no project is selected
+- Commands like `git log` show actual generated commits for the project
+- Commands like `git status` and `git diff` reference real project files
+- Maintains existing terminal aesthetic and functionality
+
+**Status:** Completes Task 6 of the Git Pages Project Integration specification.
+
+### Ritual Page Enhancement (Task 5)
+
+The Ritual (Merge Ritual) page has been enhanced with file selection capabilities:
+
+**Changes:**
+
+- Added file selection state management for HEAD and FEATURE code panels
+- Integrated FileSelector component with dual modals for left and right sides
+- Added "Select File" buttons above each textarea with color-coded styling (red for HEAD, blue for FEATURE)
+- Displays selected file metadata (project name and file path) with color-coded borders
+- Populates textareas with file content when files are selected
+- Maintains existing merge functionality and manual paste capability
+- All new UI elements blend seamlessly with the existing spooky aesthetic
+- Imported `FileCode` icon from lucide-react for file selection buttons
+
+**Status:** Completes Task 5 of the Git Pages Project Integration specification.
+
+### NecroDiff Page Enhancement (Task 3)
 
 The NecroDiff page has been enhanced with file selection capabilities:
 
