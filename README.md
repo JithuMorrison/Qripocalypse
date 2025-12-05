@@ -493,11 +493,11 @@ function MyComponent() {
 
 **Integration:**
 
-The FileSelector component is designed to be used across multiple pages in the Git Pages Project Integration feature:
+The FileSelector component is integrated across multiple pages in the Git Pages Project Integration feature:
 
-- **NecroDiff Page** - Select files for old/new code comparison panels
-- **Ritual Page** - Select files for HEAD/FEATURE merge conflict resolution
-- **Terminal Page** - Select project context for Git command execution
+- **NecroDiff Page** (`src/pages/necrodiff.jsx`) - Select files for old/new code comparison panels
+- **Ritual Page** (`src/pages/ritual.jsx`) - Select files for HEAD/FEATURE merge conflict resolution
+- **Terminal Page** (`src/pages/terminal.jsx`) - Select project context for Git command execution
 
 The component automatically closes after file selection and provides complete file metadata including project context for proper file handling.
 
@@ -676,7 +676,23 @@ Each character includes:
 
 The Characters page serves as both an informational showcase and a persona selection interface, allowing users to learn about and choose their preferred haunted coding assistant.
 
-### Terminal Page Enhancement (Latest - Task 6)
+### Ritual Page Enhancement (Latest - Task 7)
+
+The Ritual (Merge Conflict Resolution) page has been enhanced with FileSelector integration:
+
+**Changes:**
+
+- Added FileSelector integration for both HEAD and FEATURE code panels
+- Implemented file selection state management for left (HEAD) and right (FEATURE) panels
+- Added "Select File" buttons with haunted theme styling for both panels
+- File path display shows project name and file path when files are selected
+- Selected file content automatically populates the respective code textarea
+- Maintains existing SpellCircle animation and merge ritual functionality
+- Consistent with NecroDiff and Terminal page file selection patterns
+
+**Status:** Completes Task 7 of the Git Pages Project Integration specification.
+
+### Terminal Page Enhancement (Task 6)
 
 The Terminal (NecroTerminal) page has been enhanced with project selection and commit integration:
 
@@ -692,7 +708,7 @@ The Terminal (NecroTerminal) page has been enhanced with project selection and c
 - All Git command responses are now project-specific and contextual
 - Maintains existing CRT screen aesthetic and quick command buttons
 
-**Status:** Completes Task 6 of the Git Pages Project Integration specification.
+**Status:** Completed Task 6 of the Git Pages Project Integration specification.
 
 ### Commit Generator Utility
 
