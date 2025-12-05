@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import QRGenerator from '../components/QRGenerator';
+import QRGenerator from '../components/QrGenerator';
 import QRScanner from '../qscan';
 import { getRecentSummons, retrieveQRData } from '../services/qrStorageService';
 

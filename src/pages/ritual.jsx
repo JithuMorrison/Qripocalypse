@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import SpellCircle from '../components/Spell';
+import SpellCircle from '../components/SpellCircle';
 import FileSelector from '../components/FileSelector';
 import { FileCode } from 'lucide-react';
 
