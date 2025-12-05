@@ -683,6 +683,96 @@ const commits = generateCommitsForProjects(projectsList);
 - Medium (11-50 changes): 🧛, 🧟, 🧙‍♀️
 - Large (51+ changes): 💀, ☠️, 👹
 
+### Alerts Page (Poltergeist Alerts)
+
+An AI-powered code analysis page (`src/pages/alerts.jsx`) that scans project files for code issues and generates haunted alerts:
+
+**Features:**
+
+- **Project Integration** - Automatically scans all files from projects in ProjectContext
+- **Real-time Analysis** - Detects code issues across multiple categories with line-specific reporting
+- **Alert Categories:**
+  - **Cursed Patterns** (🔮) - Infinite loops, unbounded iterations (High severity)
+  - **Dead Variables** (💀) - Unused variable declarations (Medium severity)
+  - **Suspicious Logic** (👁️) - Magic numbers, complex conditionals, loose equality (Low-Medium severity)
+  - **Security Issues** (🚨) - eval() usage, innerHTML XSS risks, hardcoded credentials (High severity)
+  - **Deprecated Patterns** (⚠️) - var usage, deprecated React lifecycle methods, obsolete APIs (Low severity)
+- **Detailed Alert Information** - Shows project name, file path, line number, severity, and actionable suggestions
+- **Empty States** - Handles no projects and no alerts scenarios with themed messages
+- **Scan Animation** - 2-second scanning ritual with loading state
+
+**State Management:**
+
+```javascript
+{
+  alerts: Alert[],              // Generated alerts from all projects
+  isScanning: boolean,          // Scan in progress
+  projectsList: Project[]       // From ProjectContext
+}
+```
+
+**Alert Object Structure:**
+
+```javascript
+{
+  id: number,
+  type: 'curse' | 'dead' | 'suspicious' | 'security' | 'deprecated',
+  file: string,                 // File name
+  filePath: string,             // Full file path
+  message: string,              // Issue description
+  severity: 'high' | 'medium' | 'low',
+  ghost: string,                // Emoji icon
+  suggestion: string,           // Fix recommendation
+  lineNumber: number,           // Line where issue occurs
+  projectId: number,
+  projectName: string,
+  timestamp: string
+}
+```
+
+**Integration:**
+
+- Uses `useProjects()` hook to access all project files
+- Uses `generateAlertsForProjects()` from `src/utils/alertGenerator.jsx` for analysis
+- Automatically rescans when project list changes
+- Part of the haunted developer platform's code quality features
+
+### Alert Generator Utility
+
+A comprehensive code analysis utility (`src/utils/alertGenerator.jsx`) that detects various code issues:
+
+**Core Functions:**
+
+- `generateAlertsForProjects(projects)` - Analyzes all files in all projects and returns alerts
+- `analyzeFile(file, project)` - Analyzes a single file for code issues
+- `getSeverityLevel(pattern)` - Returns severity level for a pattern type
+
+**Detection Capabilities:**
+
+1. **Cursed Patterns** - Infinite loops (while(true), for(;;)) without break statements
+2. **Dead Variables** - Variables declared but never used in subsequent code
+3. **Suspicious Logic** - Magic numbers, complex conditionals (3+ operators), loose equality (==)
+4. **Missing Error Handling** - Async functions without try-catch, fetch/axios without .catch()
+5. **Security Issues** - eval() usage, innerHTML XSS risks, hardcoded credentials patterns
+6. **Deprecated Patterns** - var declarations, deprecated React lifecycle methods, String.substr(), moment.js
+
+**Features:**
+
+- Line-by-line code analysis with pattern matching
+- Context-aware detection (checks surrounding code for break statements, error handling)
+- Alert limiting to prevent overwhelming output (max 2-3 per category per file)
+- Severity classification (high/medium/low) based on issue type
+- Actionable suggestions for each detected issue
+
+**Usage:**
+
+```javascript
+import { generateAlertsForProjects } from "./utils/alertGenerator";
+
+const alerts = generateAlertsForProjects(projectsList);
+// Returns array of alert objects with file, line, severity, and suggestions
+```
+
 ### Terminal Page (NecroTerminal)
 
 A possessed command-line interface (`src/pages/terminal.jsx`) that simulates Git commands with project-specific context and spooky responses:

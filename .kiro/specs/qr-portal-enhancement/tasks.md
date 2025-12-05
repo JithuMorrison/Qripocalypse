@@ -36,7 +36,8 @@
   - Make "Generate New QR" button show PremiumDialog
   - _Requirements: 4.1-4.5_
 
-- [ ] 5. Update Alerts page with project-based alerts
+- [x] 5. Update Alerts page with project-based alerts
+
   - Load actual projects from ProjectContext (useProjects hook)
   - Use AlertGenerator to analyze project files and generate 8-10 alerts
   - Display alerts with ACTUAL project names and file paths from created projects

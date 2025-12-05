@@ -57,9 +57,10 @@ export const analyzeFile = (file, project) => {
   const suspiciousLogic = detectSuspiciousLogic(content, lines);
   const missingErrorHandling = detectMissingErrorHandling(content, lines);
   const securityIssues = detectSecurityIssues(content, lines);
+  const deprecatedPatterns = detectDeprecatedPatterns(content, lines);
 
   // Combine all detected issues
-  [...cursedPatterns, ...deadVariables, ...suspiciousLogic, ...missingErrorHandling, ...securityIssues]
+  [...cursedPatterns, ...deadVariables, ...suspiciousLogic, ...missingErrorHandling, ...securityIssues, ...deprecatedPatterns]
     .forEach(issue => {
       alerts.push({
         type: issue.type,
@@ -268,6 +269,63 @@ const detectSecurityIssues = (content, lines) => {
         message: 'Potential hardcoded credentials detected',
         severity: 'high',
         suggestion: 'Use environment variables for sensitive data',
+        lineNumber: index + 1
+      });
+    }
+  });
+
+  return issues.slice(0, 2); // Limit to avoid too many alerts
+};
+
+/**
+ * Detect deprecated patterns and APIs
+ */
+const detectDeprecatedPatterns = (content, lines) => {
+  const issues = [];
+
+  lines.forEach((line, index) => {
+    // Detect var usage (deprecated in favor of let/const)
+    if (line.match(/\bvar\s+\w+/)) {
+      issues.push({
+        type: 'deprecated',
+        message: 'Use of "var" is deprecated',
+        severity: 'low',
+        suggestion: 'Use "let" or "const" instead',
+        lineNumber: index + 1
+      });
+    }
+
+    // Detect componentWillMount and other deprecated React lifecycle methods
+    if (line.includes('componentWillMount') || 
+        line.includes('componentWillReceiveProps') || 
+        line.includes('componentWillUpdate')) {
+      issues.push({
+        type: 'deprecated',
+        message: 'Deprecated React lifecycle method detected',
+        severity: 'medium',
+        suggestion: 'Use modern lifecycle methods or hooks',
+        lineNumber: index + 1
+      });
+    }
+
+    // Detect String.prototype.substr (deprecated)
+    if (line.includes('.substr(')) {
+      issues.push({
+        type: 'deprecated',
+        message: 'String.substr() is deprecated',
+        severity: 'low',
+        suggestion: 'Use String.substring() or String.slice() instead',
+        lineNumber: index + 1
+      });
+    }
+
+    // Detect moment.js (often considered deprecated in favor of date-fns or dayjs)
+    if (line.includes('moment(') && !line.includes('//')) {
+      issues.push({
+        type: 'deprecated',
+        message: 'moment.js is in maintenance mode',
+        severity: 'low',
+        suggestion: 'Consider using date-fns or dayjs for new projects',
         lineNumber: index + 1
       });
     }

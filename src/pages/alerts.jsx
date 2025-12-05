@@ -1,50 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { useProjects } from '../components/projectContext';
+import { generateAlertsForProjects } from '../utils/alertGenerator';
 
 const Alerts = () => {
   const [alerts, setAlerts] = useState([]);
   const [isScanning, setIsScanning] = useState(false);
-
-  const mockAlerts = [
-    {
-      id: 1,
-      type: 'curse',
-      file: 'ancientSpell.js',
-      message: 'Cursed loop detected - this could summon unwanted entities',
-      severity: 'high',
-      ghost: '👻',
-      suggestion: 'Break the loop with a protective incantation'
-    },
-    {
-      id: 2,
-      type: 'dead',
-      file: 'ritual.ts',
-      message: 'Dead variable wandering in the code',
-      severity: 'medium',
-      ghost: '💀',
-      suggestion: 'Lay the variable to rest or put it to work'
-    },
-    {
-      id: 3,
-      type: 'suspicious',
-      file: 'darkMagic.py',
-      message: 'Suspicious logic that might anger the code gods',
-      severity: 'low',
-      ghost: '🔮',
-      suggestion: 'Add protective comments and error handling'
-    }
-  ];
+  const { projectsList } = useProjects();
 
   const scanForCurses = () => {
     setIsScanning(true);
     setTimeout(() => {
-      setAlerts(mockAlerts);
+      // Generate alerts from actual projects
+      const generatedAlerts = generateAlertsForProjects(projectsList);
+      setAlerts(generatedAlerts);
       setIsScanning(false);
     }, 2000);
   };
 
   useEffect(() => {
     scanForCurses();
-  }, []);
+  }, [projectsList]);
 
   const getSeverityColor = (severity) => {
     switch (severity) {
@@ -112,6 +87,11 @@ const Alerts = () => {
                       {alert.severity.toUpperCase()}
                     </span>
                   </div>
+                  <div className="text-sm text-purple-400 mb-2">
+                    <span className="font-semibold">Project:</span> {alert.projectName} | 
+                    <span className="font-semibold ml-2">Path:</span> {alert.filePath}
+                    {alert.lineNumber && <span className="ml-2">| <span className="font-semibold">Line:</span> {alert.lineNumber}</span>}
+                  </div>
                   <p className="text-gray-300 mb-3">{alert.message}</p>
                   <div className="bg-black/50 rounded-lg p-3">
                     <p className="text-green-400 text-sm">
@@ -124,11 +104,21 @@ const Alerts = () => {
           ))}
         </div>
 
-        {/* Empty State */}
-        {alerts.length === 0 && !isScanning && (
+        {/* Empty State - No Projects */}
+        {projectsList.length === 0 && !isScanning && (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">🏚️</div>
+            <p className="text-xl text-gray-400 mb-2">No projects found in the graveyard</p>
+            <p className="text-sm text-gray-500">Create a project to start detecting code spirits</p>
+          </div>
+        )}
+
+        {/* Empty State - No Alerts */}
+        {projectsList.length > 0 && alerts.length === 0 && !isScanning && (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">😴</div>
             <p className="text-xl text-gray-400">The spirits are quiet... for now.</p>
+            <p className="text-sm text-gray-500 mt-2">No code issues detected in your projects</p>
           </div>
         )}
       </div>
